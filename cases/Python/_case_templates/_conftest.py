@@ -1,12 +1,17 @@
 from case_CASENUMBER import *
-from py.xml import html # https://stackoverflow.com/questions/70651334/is-there-way-to-show-test-author-name-in-pytest-html-reports-for-each-tests
+from py.xml import html
 import pytest
 import re
 import platform
 import os
+import sys
+import pathlib
+
+# sys.path.insert(0, str(pathlib.Path(__file__).parent.parent.parent / 'library'))
 
 square_open = re.escape("[")
 square_close = re.escape("]")
+
 
 def pytest_addoption(parser):
     arg_parser = CaseArgumentParser()
@@ -22,6 +27,7 @@ def pytest_addoption(parser):
     parser.addoption("--pytest_parametrize", action='append', default=[], help="pytest_parametrize")
 
     pass
+
 
 def pytest_generate_tests(metafunc):
     metafunc.parametrize("pytest_parametrize", metafunc.config.getoption("pytest_parametrize"))
@@ -43,6 +49,7 @@ def pytest_html_results_table_header(cells):
 
     pass
 
+
 @pytest.hookimpl(optionalhook=True)
 def pytest_html_results_table_row(report, cells):
     test_params = re.search('%s(.*)%s' % (square_open, square_close), report.head_line).group(1)
@@ -61,6 +68,7 @@ def pytest_html_results_table_html(report, data):
         del data[:]
 '''
 
+
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     outcome = yield
@@ -74,6 +82,7 @@ def pytest_runtest_makereport(item, call):
         #report.extra = extra
     pass
 
+
 def pytest_configure(config):
     host_name = platform.uname()[1]
     (_, software_info) = KY_GetSoftwareVersion()
@@ -81,12 +90,21 @@ def pytest_configure(config):
 
     (_, infosize_test) = KY_DeviceScan()
     installed_frame_grabbers = []
+    
+    device_index = config.getoption("--deviceIndex")
+
     for x in range(0, infosize_test):
         (status, device_info) = KY_DeviceInfo(x)
         installed_frame_grabbers.append(device_info.szDeviceDisplayName)
 
+    if device_index < len(installed_frame_grabbers):
+        actual_frame_grabber = f"[{device_index}] {installed_frame_grabbers[device_index]}"
+    else:
+        actual_frame_grabber = f"Device index {device_index} not found"
+
     config._metadata = {
         'Name of Machine': host_name,
         'VP version': vp_sersion,
-        'Installed frame grabbers': ', '.join(installed_frame_grabbers)
+        'Hardware Environment': ', '.join(installed_frame_grabbers),
+        'Actual frame grabber': actual_frame_grabber
     }

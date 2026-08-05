@@ -2,6 +2,7 @@
 import sys
 import os
 import argparse
+os.environ["WithAdapter"] = "1"
 sys.path.insert(0, os.environ['KAYA_VISION_POINT_PYTHON_PATH'])
 from KYFGLib import *
 
@@ -13,6 +14,8 @@ from enum import IntEnum  # for CaseReturnCode
 # import numpy as np
 # import cv2
 # from numpngw import write_png
+import json
+import pathlib
 
 
 def CaseArgumentParser():
@@ -30,13 +33,122 @@ def CaseArgumentParser():
     parser.add_argument('--height', type=int, default=480, help='Height')
     return parser
 
+
+def Reset_grabber(grabberHandle):
+    try:
+        (status, value) = KYFG_GetGrabberValueEnum(grabberHandle, 'CxpPoCxpStatus')
+        # (status_str,) = KYFG_GetGrabberValueEnum_ByValueName(grabberHandle, 'CxpPoCxpStatus', status_value)
+        print('CxpPoCxpStatus Before Reset', value)
+        if value != '0':
+            if KYFG_IsGrabberValueImplemented(grabberHandle, 'CxpPoCxpHostConnectionSelector'):
+                KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, 'CxpPoCxpHostConnectionSelector', 'All')
+                KYFG_GrabberExecuteCommand(grabberHandle, 'CxpPoCxpAuto')
+                time.sleep(30)
+                (status, value) = KYFG_GetGrabberValueEnum(grabberHandle, 'CxpPoCxpStatus')
+                print('CxpPoCxpStatus After Reset', value)
+        if KYFG_IsGrabberValueImplemented(grabberHandle, 'TriggerMode'):
+            KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, 'TriggerMode', 'Off')
+        # if KYFG_IsGrabberValueImplemented(grabberHandle, 'CameraTriggerMode'):
+        #     KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, 'CameraTriggerMode', 'Off')
+        if KYFG_IsGrabberValueImplemented(grabberHandle, 'PulseMessageMode'):
+            KYFG_SetGrabberValueEnum(grabberHandle, 'PulseMessageMode', 0)
+            # KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, 'PulseMessageMode', 'Basic')
+    except:
+        pass
+    print('#################### Reset Grabber Completed ###################')
+
+
+def Reset_camera(cameraHandle):
+    # 1. open json file with camera descriptions
+    # 2. find this particular camera description
+    # 3. from camera description take its "reset_sequence"
+    # 4. perform the "reset_sequence" defined for this camera
+
+    (status, camInfo) = KYFG_CameraInfo2(cameraHandle)
+    model_name = camInfo.deviceModelName
+
+    # Gets the BIN folder location from environment variable
+    kaya_path = os.environ.get("KAYA_VISION_POINT_BIN_PATH")  # Gets the value of the env variable
+    if not kaya_path:
+        kaya_path = os.environ.get("KAYA_VISION_POINT_2_BIN_PATH")
+    if not kaya_path:
+        raise EnvironmentError("None of Environment variables KAYA_VISION_POINT_BIN_PATH or KAYA_VISION_POINT_2_BIN_PATH is set")
+
+    json_path = pathlib.Path(kaya_path) / "KAYA_Known_cameras.json"
+
+    if not os.path.exists(json_path):
+        print(f"[ERROR] JSON file not found: {json_path}")
+        return
+
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            jsonCameras = json.load(f)
+    except json.JSONDecodeError as e:
+        print(f"[ERROR] Failed to parse JSON: {e}")
+        return
+
+# Normalize Iron variants to "Iron"
+    lookup_name = model_name
+    if model_name.startswith("Iron") and "Iron" in jsonCameras:
+        lookup_name = "Iron"
+    if model_name.startswith("Chameleon") and "Chameleon" in jsonCameras:
+        lookup_name = "Chameleon"
+
+    if lookup_name not in jsonCameras:
+        print(f"No data about {model_name}")
+        return
+
+    camData = jsonCameras[lookup_name]
+
+    referenced_data = camData.get("refer")
+    if referenced_data:
+        camData = jsonCameras.get(referenced_data, camData)
+    reset_sequence = camData.get("reset_sequence")
+
+    if not reset_sequence:
+        print(f"[INFO] No 'reset_sequence' found for camera '{cameraHandle}'.")
+        return
+    print()
+    print("#################### Reset Camera Start ###################")
+    print()
+    print(f"Camera: {model_name}")
+    for step in reset_sequence:
+        for key, value in step.items():
+            print(f" - {key} = {value}")
+            (status, paramValueType) = KYFG_GetCameraValueType(cameraHandle, key)
+            if paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_INT:
+                KYFG_SetCameraValueInt(cameraHandle, key, value)
+
+            elif paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_BOOL:
+                KYFG_SetCameraValueBool(cameraHandle, key, value)
+
+            elif paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_STRING:
+                KYFG_SetCameraValueString(cameraHandle, key, value)
+
+            elif paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_FLOAT:
+                KYFG_SetCameraValueFloat(cameraHandle, key, value)
+
+            elif paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_ENUM:
+                if isinstance(value, str):
+                    KYFG_SetCameraValueEnum_ByValueName(cameraHandle, key, value)
+                else:
+                    KYFG_SetCameraValueEnum(cameraHandle, key, value)
+
+            elif paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_COMMAND:
+                KYFG_CameraExecuteCommand(cameraHandle, key)
+    print()
+    print("#################### Reset Camera Stop ####################")
+    print()
+    return
+    # Camera initialization for this specific test
+
+
 def CaseRun(args):
     print(f'\nEntering CaseRun({args}) (use -h or --help to print available parameters and exit)...')
 
     device_infos = {}
 
     # Start of common KAYA prolog for 'def CaseRun(args)'
-    # Start of common KAYA prolog for "def CaseRun(args)"
     unattended = args["unattended"]
     device_index = args["deviceIndex"]
 
@@ -85,6 +197,7 @@ def CaseRun(args):
 
     # Open selected PCI device
     (device_handle,) = KYFG_Open(device_index)
+    Reset_grabber(device_handle)
     device_info = device_infos[device_index]
     print(f'Opened device [{device_index}]: (PCI {device_info.nBus}:{device_info.nSlot}:{device_info.nFunction})"{device_info.szDeviceDisplayName}"')
 
@@ -97,8 +210,9 @@ def CaseRun(args):
 
     print("\nDoing something with the selected device...\n")
 
-    #Close the device used for this test
-    (status, ) = KYFG_Close(device_handle)  # TODO: If Chameleon selected then without this call: Process finished with exit code -1073740791 (0xC0000409)
+    # Close the device used for this test
+    (status, ) = KYFG_Close(device_handle)
+    # TODO: If Chameleon selected then without this call: Process finished with exit code -1073740791 (0xC0000409)
     print(f'Closed device [{device_index}]: (PCI {device_info.nBus}:{device_info.nSlot}:{device_info.nFunction})"{device_info.szDeviceDisplayName}"')
 
     print(f'\nExiting from CaseRun({args}) with code SUCCESS...')
@@ -114,6 +228,7 @@ def ParseArgs():
 # The flow starts here
 if __name__ == "__main__":
     try:
+        print("case 3211 Process ID:", os.getpid())
         args_ = ParseArgs()
         return_code = CaseRun(args_)
         print(f'Case return code: {return_code}')

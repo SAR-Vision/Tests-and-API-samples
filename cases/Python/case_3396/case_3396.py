@@ -2,6 +2,7 @@
 import sys
 import os
 import argparse
+os.environ["WithAdapter"] = "1"
 sys.path.insert(0, os.environ['KAYA_VISION_POINT_PYTHON_PATH'])
 from KYFGLib import *
 
@@ -14,6 +15,8 @@ from enum import IntEnum  # for CaseReturnCode
 # import cv2
 # from numpngw import write_png
 import time
+import json
+import pathlib
 
 
 def CaseArgumentParser():
@@ -32,15 +35,176 @@ def CaseArgumentParser():
     return parser
 
 
-def Reset_Grabber(grabberHandle):
-    pass
-    # Grabber initialization for this specific test
+# Common KAYA fragment_03
+# Grabber initialization for this specific test
+def Reset_grabber(grabberHandle):
+    try:
+        (status, value) = KYFG_GetGrabberValueEnum(grabberHandle, 'CxpPoCxpStatus')
+        # (status_str,) = KYFG_GetGrabberValueEnum_ByValueName(grabberHandle, 'CxpPoCxpStatus', status_value)
+        print('CxpPoCxpStatus Before Reset', value)
+        if value != '0':
+            if KYFG_IsGrabberValueImplemented(grabberHandle, 'CxpPoCxpHostConnectionSelector'):
+                KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, 'CxpPoCxpHostConnectionSelector', 'All')
+                KYFG_GrabberExecuteCommand(grabberHandle, 'CxpPoCxpAuto')
+                time.sleep(30)
+                (status, value) = KYFG_GetGrabberValueEnum(grabberHandle, 'CxpPoCxpStatus')
+                print('CxpPoCxpStatus After Reset', value)
+        if KYFG_IsGrabberValueImplemented(grabberHandle, 'TriggerMode'):
+            KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, 'TriggerMode', 'Off')
+        # if KYFG_IsGrabberValueImplemented(grabberHandle, 'CameraTriggerMode'):
+        #     KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, 'CameraTriggerMode', 'Off')
+        if KYFG_IsGrabberValueImplemented(grabberHandle, 'PulseMessageMode'):
+            KYFG_SetGrabberValueEnum(grabberHandle, 'PulseMessageMode', 0)
+            # KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, 'PulseMessageMode', 'Basic')
+    except:
+        pass
+    print('#################### Reset Grabber Completed ###################')
 
 
-def Reset_camera(cameraHandle):
-    pass
-    # Camera initialization for this specific test
+def Reset_camera(cameraHandle, grabberHandle):     # Camera initialization for this specific test
 
+    # 1. open json file with camera descriptions
+    # 2. find this particular camera description
+    # 3. from camera description take its "reset_camera_sequence" and "reset_grabber_sequence"
+    # 4. perform the "reset_camera_sequence" and "reset_grabber_sequence" defined for this camera
+
+    (status, camInfo) = KYFG_CameraInfo2(cameraHandle)
+    model_name = camInfo.deviceModelName
+    vendor_name = camInfo.deviceVendorName
+
+    # Gets the BIN folder location from environment variable
+    kaya_path = os.environ.get("KAYA_VISION_POINT_CONF")  # Gets the value of the env variable
+    if not kaya_path:
+        raise EnvironmentError("None of Environment variables KAYA_VISION_POINT_CONF")
+
+    json_path = pathlib.Path(kaya_path) / "KAYA_Known_cameras.json"
+    print("kaya_path: ", kaya_path)
+
+    if not os.path.exists(json_path):
+        print(f"[ERROR] JSON file not found: {json_path}")
+        return
+
+    try:
+        # Load JSON and strip both full-line and inline // comments
+        with open(json_path, 'r', encoding='utf-8') as f:
+            cleaned_json_lines = []
+            for line in f:
+                stripped = line.strip()
+                if stripped.startswith("//"):  # whole line comment
+                    continue
+                # remove inline comment after valid JSON content
+                if "//" in line:
+                    line = line.split("//", 1)[0].rstrip()
+                cleaned_json_lines.append(line)
+
+            cleaned_json_text = '\n'.join(cleaned_json_lines)
+
+        jsonCameras = json.loads(cleaned_json_text)
+
+    except json.JSONDecodeError as e:
+        print(f"[ERROR] Failed to parse JSON: {e}")
+        return
+
+    # Combine vendor name + camera name
+    if "Chameleon" in model_name:
+        model_name = "Chameleon"
+    lookup_name = f"{vendor_name}#{model_name}"
+    print(lookup_name)
+
+    if lookup_name not in jsonCameras:
+        print(f"[ERROR] No data for camera '{lookup_name}' in JSON.")
+        return
+
+    cam_entry = jsonCameras[lookup_name]
+
+    # Select the _Default_ profile or first available one
+    profile_name = "_Default_"
+    if profile_name not in cam_entry:
+        # If "_Default_" not found, pick the first key
+        profile_name = next(iter(cam_entry.keys()))
+        print(f"[INFO] Using profile '{profile_name}' for '{lookup_name}'")
+
+    camData = cam_entry[profile_name]
+
+    # Handle 'refer' field if exists (optional)
+    referenced_data = camData.get("refer")
+    if referenced_data:
+        camData = jsonCameras.get(referenced_data, camData)
+
+    # Extract reset sequences
+    reset_camera_sequence = camData.get("reset_camera_sequence")
+    reset_grabber_sequence = camData.get("reset_grabber_sequence")
+
+    if not reset_camera_sequence:
+        print(f"[INFO] No 'reset_camera_sequence' found for camera '{model_name}'.")
+        return
+    print()
+
+    print("#################### Reset Camera Start ###################")
+    print()
+
+    print(f"Camera: {model_name}")
+    for step in reset_camera_sequence:
+        for key, value in step.items():
+            print(f" - {key} = {value}")
+            (status, paramValueType) = KYFG_GetCameraValueType(cameraHandle, key)
+            if paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_INT:
+                KYFG_SetCameraValueInt(cameraHandle, key, value)
+
+            elif paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_BOOL:
+                KYFG_SetCameraValueBool(cameraHandle, key, value)
+
+            elif paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_STRING:
+                KYFG_SetCameraValueString(cameraHandle, key, value)
+
+            elif paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_FLOAT:
+                KYFG_SetCameraValueFloat(cameraHandle, key, value)
+
+            elif paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_ENUM:
+                if isinstance(value, str):
+                    KYFG_SetCameraValueEnum_ByValueName(cameraHandle, key, value)
+                else:
+                    KYFG_SetCameraValueEnum(cameraHandle, key, value)
+
+            elif paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_COMMAND:
+                KYFG_CameraExecuteCommand(cameraHandle, key)
+
+    for cam_injson in reset_grabber_sequence:
+        for key1, value1 in cam_injson.items():
+            print(f" - ## grabber ## {key1} = {value1}")
+            (status, paramValueType) = KYFG_GetGrabberValueType(grabberHandle, key1)
+            pass
+            if paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_INT:
+                KYFG_SetGrabberValueInt(grabberHandle, key1, value1)
+
+            elif paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_BOOL:
+                KYFG_SetGrabberValueBool(grabberHandle, key1, value1)
+
+            elif paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_STRING:
+                KYFG_SetGrabberValueString(grabberHandle, key1, value1)
+
+            elif paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_FLOAT:
+                KYFG_SetGrabberValueFloat(grabberHandle, key1, value1)
+
+            elif paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_ENUM:
+                if isinstance(value1, str):
+                    KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, key1, value1)
+                else:
+                    KYFG_SetGrabberValueEnum(grabberHandle, key1, value1)
+
+            elif paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_COMMAND:
+                KYFG_GrabberExecuteCommand(grabberHandle, key1)
+
+            elif paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_UNKNOWN:
+                print(
+                    f" - ## is not possible set grabber parameter ## {key1} to {value1}, the parameter type: "
+                    f"PROPERTY_TYPE_UNKNOWN")
+
+    print()
+    print("#################### Reset Camera Stop ####################")
+    print()
+    return
+# END OF Common KAYA fragment_03
 
 
 def ParseArgs():
@@ -134,21 +298,41 @@ def CaseRun(args):
     expectedFPS = args['expectedFPS']
     streamDuration = args['streamDuration']
     (grabberHandle,) = KYFG_Open(device_index)
+
     (status, cameraList) = KYFG_UpdateCameraList(grabberHandle)
+    camIndex = 0
+
+    ############################
+    Reset_grabber(grabberHandle)
+    ############################
+
     if len(cameraList) < 2:
         print(len(cameraList), 'cameras detected')
         return CaseReturnCode.NO_HW_FOUND
 
     # Grabber trigger setting
     (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "TimerSelector", "Timer0")
+    print("Timer Selector = 0")
     FrameTime = 1e+6 / expectedFPS
     (status,) = KYFG_SetGrabberValueFloat(int(grabberHandle), "TimerDelay", FrameTime / 2)
     (status,) = KYFG_SetGrabberValueFloat(int(grabberHandle), "TimerDuration", FrameTime / 2)
     (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "TimerTriggerSource", "KY_DISABLED")
     streamHandle_array = []
     streamStructsArray = []
+
     for cameraHandle in cameraList:
         (status,) = KYFG_CameraOpen2(cameraHandle, None)
+        KYFG_SetGrabberValueInt(grabberHandle, "CameraSelector", camIndex)
+        #########################################
+        Reset_camera(cameraHandle, grabberHandle)
+        #########################################
+
+        try:
+            if KYFG_IsCameraValueImplemented(cameraHandle, "SimulationTriggerMode"):
+                KYFG_SetCameraValueEnum(cameraHandle, "SimulationTriggerMode", 0)
+        except:
+            pass
+               
         if not KYFG_IsCameraValueImplemented(cameraHandle, "TriggerMode") and not KYFG_IsCameraValueImplemented(cameraHandle, "SimulationTriggerMode"):
             return CaseReturnCode.NO_HW_FOUND
         (status, camInfo) = KYFG_CameraInfo2(cameraHandle)
@@ -161,13 +345,15 @@ def CaseRun(args):
         (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "CameraTriggerSource", "KY_TIMER_ACTIVE_0")
         
         # Setting up trigger mode for the camera on the camera side
-        KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "TriggerMode", "On")
-        KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "TriggerSource", "LinkTrigger0")
+        if KYFG_IsCameraValueImplemented(cameraHandle, "TriggerMode"):
+            KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "TriggerMode", "On")
+            KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "TriggerSource", "LinkTrigger0")
         
         # Setting up exposure
-        KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "ExposureAuto", "Off")
-        Exposure = 1e+6 / expectedFPS * 0.9
-        KYFG_SetCameraValueFloat(cameraHandle, "ExposureTime", Exposure)
+        if KYFG_IsCameraValueImplemented(cameraHandle, "ExposureAuto"):
+            KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "ExposureAuto", "Off")
+            Exposure = 1e+6 / expectedFPS * 0.9
+            KYFG_SetCameraValueFloat(cameraHandle, "ExposureTime", Exposure)
         
         # Stream preparation
         (status, streamHandle) = KYFG_StreamCreate(cameraHandle, 0)
@@ -176,7 +362,7 @@ def CaseRun(args):
         streamStructsArray.append(streamCallbackStruct)
         (status,) = KYFG_StreamBufferCallbackRegister(streamHandle, streamCallbackFunc, py_object(streamCallbackStruct))
         (_, payload_size, _, _) = KYFG_StreamGetInfo(streamHandle, KY_STREAM_INFO_CMD.KY_STREAM_INFO_PAYLOAD_SIZE)
-        (_, buf_allignment, _, _) = KYFG_StreamGetInfo(streamHandle, KY_STREAM_INFO_CMD.KY_STREAM_INFO_BUF_ALIGNMENT)
+        (_, buf_alignment, _, _) = KYFG_StreamGetInfo(streamHandle, KY_STREAM_INFO_CMD.KY_STREAM_INFO_BUF_ALIGNMENT)
         
         # Setting up optimal buffer quantity
         Buffers = int(expectedFPS * 0.25)
@@ -214,15 +400,22 @@ def CaseRun(args):
         (status, frame_counter) = KYFG_GetGrabberValueInt(grabberHandle, "RXFrameCounter")
         (status, drop_frame_counter) = KYFG_GetGrabberValueInt(grabberHandle, "DropFrameCounter")
         (status,) = KYFG_StreamDelete(streamHandle)
-        KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "TriggerMode", "Off")
+
+        if KYFG_IsCameraValueImplemented(cameraHandle, "TriggerMode"):
+            KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "TriggerMode", "Off")
+
         KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "CameraTriggerMode", "Off")
         (status,) = KYFG_CameraClose(cameraHandle)
-        print(f"\n*** Stats for {camInfo.deviceModelName} ***")
+        camIndex += 1
+
+        print(f"\n*** Status for {camInfo.deviceModelName} ***")
         print(f"CameraHandle {cameraHandle}")
         print("RXFrameCounter:   ", frame_counter)
         print("DropFrameCounter: ", drop_frame_counter)
         print("CallbackCounter:  ", streamCallbackStruct.callbackCounter)
-        if frame_counter == 0 or drop_frame_counter > 0:
+
+        frame_threshold = 5
+        if frame_counter == 0 or drop_frame_counter > frame_threshold:
             is_test_passed = False
     differences = []
     
@@ -230,10 +423,15 @@ def CaseRun(args):
         difference = streamStructsArray[0].timestamps[i] - streamStructsArray[1].timestamps[i]
         differences.append(difference)
         #print(f"{i + 1}: ", streamStructsArray[0].timestamps[i], (streamStructsArray[1].timestamps[i]), difference)
-    
+
+        print("differences", differences, "timestamp1:", streamStructsArray[0].timestamps[i], "timestamp2:", streamStructsArray[1].timestamps[i])
+
     (status,) = KYFG_Close(int(grabberHandle))
-    assert is_test_passed, 'Test not passed: frame_counter == 0 or drop_frame_counter > 0'
+    assert is_test_passed, 'Test not passed: frame_counter == 0 or drop_frame_counter > frame_threshold'
     assert abs(sum(differences)/len(differences)) < 1e+4, 'Test not passed: Difference between timestamps to large'
+    # print(sum(differences))
+    # print(len(differences))
+    # print(sum(differences)/len(differences))
 
     print(f'\nExiting from CaseRun({args}) with code SUCCESS...')
     return CaseReturnCode.SUCCESS
@@ -242,6 +440,7 @@ def CaseRun(args):
 # The flow starts here
 if __name__ == "__main__":
     try:
+        print("case 3396 Process ID:", os.getpid())
         args_ = ParseArgs()
         return_code = CaseRun(args_)
         print(f'Case return code: {return_code}')

@@ -11,17 +11,36 @@ from enum import IntEnum
 import pytest
 
 sys.path.insert(1, os.getcwd())
+# sys.path.insert(0, str(pathlib.Path(__file__).parent.parent.parent / 'library'))
 from case_CASENUMBER import *
+
+
+# def pytest_parametrize_to_dict(args, parametrize_str):
+#     parser = CaseArgumentParser()
+#     parser.add_argument('--test_should_fail', default=False, type=lambda x: (str(x).lower() in ['true', 'yes']))
+#     # parametrize_str_tokens = parametrize_str.split()
+#     parametrize_str_tokens = shlex.split(parametrize_str)
+#     parametrize_arg_names = []
+#     for arg_name, arg_value in zip(parametrize_str_tokens[::2], parametrize_str_tokens[1::2]):
+#         parametrize_arg_names.append(arg_name[2:])
+#     parametrized_args = vars(parser.parse_args(parametrize_str_tokens))
+#     for parametrize_arg_name in parametrize_arg_names:
+#         args[parametrize_arg_name] = parametrized_args[parametrize_arg_name]
+#     return
 
 
 def pytest_parametrize_to_dict(args, parametrize_str):
     parser = CaseArgumentParser()
     parser.add_argument('--test_should_fail', default=False, type=lambda x: (str(x).lower() in ['true', 'yes']))
-    # parametrize_str_tokens = parametrize_str.split()
     parametrize_str_tokens = shlex.split(parametrize_str)
     parametrize_arg_names = []
+    # for arg_name, arg_value in zip(parametrize_str_tokens[::2], parametrize_str_tokens[1::2]):
+    #     parametrize_arg_names.append(arg_name[2:].replace('-', '_'))
     for arg_name, arg_value in zip(parametrize_str_tokens[::2], parametrize_str_tokens[1::2]):
-        parametrize_arg_names.append(arg_name[2:])
+        for action in parser._actions:
+            if arg_name in action.option_strings:
+                parametrize_arg_names.append(action.dest)
+                break
     parametrized_args = vars(parser.parse_args(parametrize_str_tokens))
     for parametrize_arg_name in parametrize_arg_names:
         args[parametrize_arg_name] = parametrized_args[parametrize_arg_name]
@@ -105,22 +124,28 @@ def get_subprocess_result(full_output):
     elif 'Case return code: 5' in full_output:
         return_code = CaseReturnCode.FAILED_WITH_EXCEPTION
 
-    return (return_code, test_failed)
+    return return_code, test_failed
+
+
 def get_json_result_file_and_data(automation_scripts_folder_name):
     json_param_results_file = pathlib.Path(f'{automation_scripts_folder_name}/case_CASENUMBER').joinpath(
         "case_CASENUMBER_param_results.json")
     with json_param_results_file.open('r') as jrf:
         json_param_results_data = json.load(jrf)
         return json_param_results_file, json_param_results_data
+
+
 def save_result_to_json(parametrize, result, output, automation_scripts_folder_name):
     json_param_results_file, json_param_results_data = get_json_result_file_and_data(automation_scripts_folder_name)
     json_param_results_data[parametrize]["status"] = result
     json_param_results_data[parametrize]["last output"] = output
     with json_param_results_file.open('w') as jrf: json.dump(json_param_results_data, jrf, indent=4)
 
+
 def test_case(command_line_args, pytest_parametrize):
     args = command_line_args
-    automation_scripts_folder_name = 'QA_Automation_Scripts'
+    # automation_scripts_folder_name = 'QA_Automation_Scripts'
+    automation_scripts_folder_name = str(pathlib.Path(__file__).parent.parent)
     args["unattended"] = True  # force unattended mode when running under PyTest
     # othwerwise, we get "OSError: pytest: reading from stdin while output is captured!  Consider using `-s`"
 
@@ -128,7 +153,8 @@ def test_case(command_line_args, pytest_parametrize):
 
     test_should_fail = args['test_should_fail']
     args.pop('test_should_fail')
-    command = [python_ver, f'./{automation_scripts_folder_name}/case_CASENUMBER/case_CASENUMBER.py', '--unattended', '--deviceIndex',
+    command = [python_ver, str(pathlib.Path(automation_scripts_folder_name) / 'case_CASENUMBER' / 'case_CASENUMBER.py'),
+               '--unattended', '--deviceIndex',
                f'{args["deviceIndex"]}']
     if len(pytest_parametrize.split(' ')) > 2:
         # for parameter in pytest_parametrize.split(' ')[2:]:
@@ -147,10 +173,12 @@ def test_case(command_line_args, pytest_parametrize):
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         # return_code = CaseRun(args)
         pid = process.pid
+        print("\nProcess ID: ", pid, "\n")
         stdout, stderr = process.communicate()
-        full_output = stdout.strip() if len(stderr.strip()) == 0 else stdout.strip()+ '\n' + stderr.strip()
+        full_output = stdout.strip() if len(stderr.strip()) == 0 else stdout.strip() + '\n' + stderr.strip()
         # full_output = stdout.strip()+ '\n' + stderr.decode("utf-8")
-        return_code = CaseReturnCode(process.returncode) # if return code not in CaseReturnCode: return_code = CaseReturnCode.FAILED_WITH_EXCEPTION
+        return_code = CaseReturnCode(
+            process.returncode)  # if return code not in CaseReturnCode: return_code = CaseReturnCode.FAILED_WITH_EXCEPTION
     except Exception as ex:
         (return_code, test_failed) = get_subprocess_result(full_output)
 
@@ -181,9 +209,10 @@ def test_case(command_line_args, pytest_parametrize):
            test_failed, \
         f'Test expected to fail: {"Yes" if test_should_fail else "No"}, actually failed: {"Yes" if test_failed else "No"}'
 
-    if test_should_fail == True and test_failed == True:
+    if test_should_fail is True and test_failed is True:
         print(f'Test case expectedly failed')
         save_result_to_json(pytest_parametrize, "Passed", full_output, automation_scripts_folder_name)
     else:
-        assert return_code == CaseReturnCode.SUCCESS, save_result_to_json(pytest_parametrize, "Failed", full_output, automation_scripts_folder_name)
+        assert return_code == CaseReturnCode.SUCCESS, save_result_to_json(pytest_parametrize, "Failed", full_output,
+                                                                          automation_scripts_folder_name)
         save_result_to_json(pytest_parametrize, "Passed", full_output, automation_scripts_folder_name)

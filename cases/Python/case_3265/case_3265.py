@@ -3,11 +3,16 @@ import sys
 import os
 import argparse
 sys.path.insert(0, os.environ['KAYA_VISION_POINT_PYTHON_PATH'])
+from KYFGLib import *
 
 # Common Case imports DO NOT EDIT!!!
 from enum import IntEnum  # for CaseReturnCode
 
 # additional imports required by particular case, ADD CASE SPECIFIC IMPORTS UNDER THIS LINE:
+# For example:
+# import numpy as np
+# import cv2
+# from numpngw import write_png
 import pathlib
 import platform
 import psutil
@@ -38,10 +43,24 @@ def CaseArgumentParser():
     parser.add_argument("--file", default="", type=str, help="Setup file")
     return parser
 
+
+def Reset_Grabber(grabberHandle):
+    pass
+    # Grabber initialization for this specific test
+
+
+def Reset_camera(cameraHandle):
+    pass
+    # Camera initialization for this specific test
+
+
+
 def ParseArgs():
     parser = CaseArgumentParser()
     args = parser.parse_args()
     return vars(args)
+
+
 def find_setup_file(VP_version, isTrunk, targetVersion, revision, arch):
     path_base = pathlib.Path(r"\\KAYAWIN10SRV1\Jenkins_Last_Builds\SW")
     folderPath = path_base.joinpath(VP_version).joinpath(f"{'trunk'}" if isTrunk else "branches")
@@ -52,6 +71,7 @@ def find_setup_file(VP_version, isTrunk, targetVersion, revision, arch):
             if f".{revision}_" in nextFile.name and f"_{arch}_" in nextFile.name:
                 return nextFile
     return ""
+
 
 def end_task(pid):
     try:
@@ -66,6 +86,7 @@ def end_task(pid):
     except psutil.TimeoutExpired:
         print(f"Process with PID {pid} timeout.")
 
+
 def close_VP_processes():
     processes = psutil.process_iter(attrs=['pid', 'name', 'username'])  #get list of processes
     for proc in processes:
@@ -79,12 +100,16 @@ def close_VP_processes():
                 end_task(pid)
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             pass
+
+
 def start_setup(file, mode):
     command = f'"{file}" /{mode}'
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     stdout, stderr = process.communicate()
     print(stdout, stderr, sep='\n')
     return process.returncode
+
+
 def CaseRun(args):
     print(f'\nEntering CaseRun({args}) (use -h or --help to print available parameters and exit)...')
 
@@ -130,6 +155,8 @@ def CaseRun(args):
     #     return CaseReturnCode.NO_HW_FOUND
 
     # End of common KAYA prolog for "def CaseRun(args)"
+
+    # Other parameters used by this particular case
     args = ParseArgs()
     mode = args["mode"]
     vp_version = args["vp_ver"]

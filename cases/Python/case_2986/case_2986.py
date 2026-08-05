@@ -2,6 +2,7 @@
 import sys
 import os
 import argparse
+os.environ["WithAdapter"] = "1"
 sys.path.insert(0, os.environ['KAYA_VISION_POINT_PYTHON_PATH'])
 from KYFGLib import *
 
@@ -9,13 +10,15 @@ from KYFGLib import *
 from enum import IntEnum  # for CaseReturnCode
 
 # additional imports required by particular case, ADD CASE SPECIFIC IMPORTS UNDER THIS LINE:
-from datetime import datetime
+# For example:
+# import numpy as np
+# import cv2
+# from numpngw import write_png
 import time
-import threading
 import subprocess
-
-sys.path.insert(0, os.environ['KAYA_VISION_POINT_PYTHON_PATH'])
-from KYFGLib import *
+import json
+import pathlib
+import random
 
 
 def CaseArgumentParser():
@@ -29,56 +32,193 @@ def CaseArgumentParser():
                         help='Index of PCI device to use, '
                              'run this script with "--deviceList" to see available devices and exit')
     # Other arguments needed for this specific case, PARSE CASE SPECIFIC ARGUMENTS UNDER THIS LINE:
-    parser.add_argument('--cameraIndex', type=int, default=0, help='Camera index for this instance')
-    parser.add_argument('--number_of_sent_tests', type=int, default=3, help='Number of sent triggers')
+    parser.add_argument('--cameraIndex', type=int, default=-1, help='Camera index for this instance')
+    parser.add_argument('--number_of_sent_tests', type=int, default=DEFAULT_ITERATIONS, help='Number of iterations')
+    parser.add_argument('--minSleep', type=float, default=0.01, help="Minimum random sleep in seconds")
+    parser.add_argument('--maxSleep', type=float, default=0.2, help="Maximum random sleep in seconds")
     return parser
+
 
 def ParseArgs():
     parser = CaseArgumentParser()
     args = parser.parse_args()
     return vars(args)
 
-def is_approximately_equal(num1, num2, tolerance_percent):
-    tolerance = tolerance_percent / 100.0
-    diff = abs(num1 - num2)
-    avg = (abs(num1) + abs(num2)) / 2.0
-    return diff <= avg * tolerance
-def waitFortime(time_for_sleep):
-    threadSleepSeconds = time_for_sleep
-    print(f"Thread sleep for {threadSleepSeconds} seconds: ")
-    for remaining in range(threadSleepSeconds, 0, -1):
-        sys.stdout.write("\r")
-        sys.stdout.write("{:2d} seconds remaining".format(remaining))
-        sys.stdout.flush()
-        time.sleep(1)
-    sys.stdout.write("\rComplete!            \n")
-    return threadSleepSeconds
-errorCount=0
-def new_instance(device_index, camera_index, number_of_sent_tests):
-    global errorCount
-    instance_process = subprocess.Popen(
-        ["python3", f"{__file__}", '--unattended', '--deviceIndex', f'{device_index}', "--cameraIndex", f"{camera_index}",
-         "--number_of_sent_tests", f"{number_of_sent_tests}"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        close_fds=True)
 
-    stdout_output, stderr_output = instance_process.communicate()
-    print(stdout_output.decode())
-    print(stderr_output)
-    return_code = instance_process.returncode
-    print(return_code)
-    if return_code!=0:
-        errorCount+=1
-
-    return return_code
+# Common KAYA fragment_03
+# Grabber initialization for this specific test
+def Reset_grabber(grabberHandle):
+    try:
+        (status, value) = KYFG_GetGrabberValueEnum(grabberHandle, 'CxpPoCxpStatus')
+        # (status_str,) = KYFG_GetGrabberValueEnum_ByValueName(grabberHandle, 'CxpPoCxpStatus', status_value)
+        print('CxpPoCxpStatus Before Reset', value)
+        if value != '0':
+            if KYFG_IsGrabberValueImplemented(grabberHandle, 'CxpPoCxpHostConnectionSelector'):
+                KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, 'CxpPoCxpHostConnectionSelector', 'All')
+                KYFG_GrabberExecuteCommand(grabberHandle, 'CxpPoCxpAuto')
+                time.sleep(30)
+                (status, value) = KYFG_GetGrabberValueEnum(grabberHandle, 'CxpPoCxpStatus')
+                print('CxpPoCxpStatus After Reset', value)
+        if KYFG_IsGrabberValueImplemented(grabberHandle, 'TriggerMode'):
+            KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, 'TriggerMode', 'Off')
+        # if KYFG_IsGrabberValueImplemented(grabberHandle, 'CameraTriggerMode'):
+        #     KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, 'CameraTriggerMode', 'Off')
+        if KYFG_IsGrabberValueImplemented(grabberHandle, 'PulseMessageMode'):
+            KYFG_SetGrabberValueEnum(grabberHandle, 'PulseMessageMode', 0)
+            # KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, 'PulseMessageMode', 'Basic')
+    except:
+        pass
+    print('#################### Reset Grabber Completed ###################')
 
 
+def Reset_camera(cameraHandle, grabberHandle):  # Camera initialization for this specific test
+    # 1. open json file with camera descriptions
+    # 2. find this particular camera description
+    # 3. from camera description take its "reset_camera_sequence" and "reset_grabber_sequence"
+    # 4. perform the "reset_camera_sequence" and "reset_grabber_sequence" defined for this camera
+
+    (status, camInfo) = KYFG_CameraInfo2(cameraHandle)
+    model_name = camInfo.deviceModelName
+    vendor_name = camInfo.deviceVendorName
+
+    # Gets the BIN folder location from environment variable
+    kaya_path = os.environ.get("KAYA_VISION_POINT_CONF")  # Gets the value of the env variable
+    if not kaya_path:
+        raise EnvironmentError("None of Environment variables KAYA_VISION_POINT_CONF")
+
+    json_path = pathlib.Path(kaya_path) / "KAYA_Known_cameras.json"
+    print("kaya_path: ", kaya_path)
+
+    if not os.path.exists(json_path):
+        print(f"[ERROR] JSON file not found: {json_path}")
+        return
+
+    try:
+        # Load JSON and strip both full-line and inline // comments
+        with open(json_path, 'r', encoding='utf-8') as f:
+            cleaned_json_lines = []
+            for line in f:
+                stripped = line.strip()
+                if stripped.startswith("//"):  # whole line comment
+                    continue
+                # remove inline comment after valid JSON content
+                if "//" in line:
+                    line = line.split("//", 1)[0].rstrip()
+                cleaned_json_lines.append(line)
+
+            cleaned_json_text = '\n'.join(cleaned_json_lines)
+
+        jsonCameras = json.loads(cleaned_json_text)
+
+    except json.JSONDecodeError as e:
+        print(f"[ERROR] Failed to parse JSON: {e}")
+        return
+
+    # Combine vendor name + camera name
+    if "Chameleon" in model_name:
+        model_name = "Chameleon"
+    lookup_name = f"{vendor_name}#{model_name}"
+    print(lookup_name)
+
+    if lookup_name not in jsonCameras:
+        print(f"[ERROR] No data for camera '{lookup_name}' in JSON.")
+        return
+
+    cam_entry = jsonCameras[lookup_name]
+
+    # Select the _Default_ profile or first available one
+    profile_name = "_Default_"
+    if profile_name not in cam_entry:
+        # If "_Default_" not found, pick the first key
+        profile_name = next(iter(cam_entry.keys()))
+        print(f"[INFO] Using profile '{profile_name}' for '{lookup_name}'")
+
+    camData = cam_entry[profile_name]
+
+    # Handle 'refer' field if exists (optional)
+    referenced_data = camData.get("refer")
+    if referenced_data:
+        camData = jsonCameras.get(referenced_data, camData)
+
+    # Extract reset sequences
+    reset_camera_sequence = camData.get("reset_camera_sequence")
+    reset_grabber_sequence = camData.get("reset_grabber_sequence")
+
+    if not reset_camera_sequence:
+        print(f"[INFO] No 'reset_camera_sequence' found for camera '{model_name}'.")
+        return
+    print()
+
+    print("#################### Reset Camera Start ###################")
+    print()
+
+    print(f"Camera: {model_name}")
+    for step in reset_camera_sequence:
+        for key, value in step.items():
+            print(f" - {key} = {value}")
+            (status, paramValueType) = KYFG_GetCameraValueType(cameraHandle, key)
+            if paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_INT:
+                KYFG_SetCameraValueInt(cameraHandle, key, value)
+
+            elif paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_BOOL:
+                KYFG_SetCameraValueBool(cameraHandle, key, value)
+
+            elif paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_STRING:
+                KYFG_SetCameraValueString(cameraHandle, key, value)
+
+            elif paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_FLOAT:
+                KYFG_SetCameraValueFloat(cameraHandle, key, value)
+
+            elif paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_ENUM:
+                if isinstance(value, str):
+                    KYFG_SetCameraValueEnum_ByValueName(cameraHandle, key, value)
+                else:
+                    KYFG_SetCameraValueEnum(cameraHandle, key, value)
+
+            elif paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_COMMAND:
+                KYFG_CameraExecuteCommand(cameraHandle, key)
+
+    for cam_injson in reset_grabber_sequence:
+        for key1, value1 in cam_injson.items():
+            print(f" - ## grabber ## {key1} = {value1}")
+            (status, paramValueType) = KYFG_GetGrabberValueType(grabberHandle, key1)
+            pass
+            if paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_INT:
+                KYFG_SetGrabberValueInt(grabberHandle, key1, value1)
+
+            elif paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_BOOL:
+                KYFG_SetGrabberValueBool(grabberHandle, key1, value1)
+
+            elif paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_STRING:
+                KYFG_SetGrabberValueString(grabberHandle, key1, value1)
+
+            elif paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_FLOAT:
+                KYFG_SetGrabberValueFloat(grabberHandle, key1, value1)
+
+            elif paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_ENUM:
+                if isinstance(value1, str):
+                    KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, key1, value1)
+                else:
+                    KYFG_SetGrabberValueEnum(grabberHandle, key1, value1)
+
+            elif paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_COMMAND:
+                KYFG_GrabberExecuteCommand(grabberHandle, key1)
+
+            elif paramValueType == KY_CAM_PROPERTY_TYPE.PROPERTY_TYPE_UNKNOWN:
+                print(
+                    f" - ## is not possible set grabber parameter ## {key1} to {value1}, the parameter type: "
+                    f"PROPERTY_TYPE_UNKNOWN")
+
+    print()
+    print("#################### Reset Camera Stop ####################")
+    print()
+    return
+
+# END OF Common KAYA fragment_03
 
 
-
-
-
+# Default loop count if not provided by args
+DEFAULT_ITERATIONS = 10
 
 
 def CaseRun(args):
@@ -125,97 +265,165 @@ def CaseRun(args):
         return CaseReturnCode.NO_HW_FOUND
 
     # End of common KAYA prolog for "def CaseRun(args)"
+
+    # Other parameters used by this particular case
     (status, device_info) = KY_DeviceInfo(device_index)
     if device_info.m_Protocol != KY_DEVICE_PROTOCOL.KY_DEVICE_PROTOCOL_CoaXPress:
         print('Test could not run on this grabber')
         return CaseReturnCode.COULD_NOT_RUN
-    camera_index = args['cameraIndex']
-    number_of_sent_tests = args['number_of_sent_tests']
-    # if camera_index == 0:
 
-    (grabber_handle,) = KYFG_Open(device_index)
-    #try:
-    #    (status, isSharingSupported) = KYFG_GetGrabberValueInt(grabber_handle, 'SWCapable_InterProcessSharing_Imp')
-    #    if not isSharingSupported:
-    #        print('Grabber sharing is not supported on this device')
-    #        (status,) = KYFG_Close(grabber_handle)
-    #        return CaseReturnCode.COULD_NOT_RUN
-    #except:
-    #    print('Grabber sharing is not supported on this device')
-    #    (status,) = KYFG_Close(grabberHandle)
-    #    return CaseReturnCode.COULD_NOT_RUN
-    (status, camera_list,) = KYFG_UpdateCameraList(grabber_handle)
-    for cam in camera_list:
-        (status,camInfo)=KYFG_CameraInfo2(cam)
-        if 'Chameleon' in camInfo.deviceModelName:
-            camera_list.remove(cam)
-            print(f'Camera {camInfo.deviceModelName} removed from camera list for test')
-    if camera_index == 0:
+    camera_index = args["cameraIndex"]
+    iterations = int(args["number_of_sent_tests"])
+    min_sleep = float(args["minSleep"])
+    max_sleep = float(args["maxSleep"])
+
+    # Open grabber
+    (grabberHandle,) = KYFG_Open(device_index)
+    ############################
+    Reset_grabber(grabberHandle)
+    ############################
+
+    try:
+        (status, camera_list,) = KYFG_UpdateCameraList(grabberHandle)
+
         if len(camera_list) == 0:
             return CaseReturnCode.NO_HW_FOUND
-        threads = []
-        for i in range(1, len(camera_list)):
-            thread = threading.Thread(target=new_instance, args=(device_index,camera_index+i, number_of_sent_tests,))
-            threads.append(thread)
-            thread.start()
-            time.sleep(10)
-    # Detect camera
-    cameraHandle = camera_list[camera_index]
-    if camera_index==0:
-        (status,) = KYFG_CameraOpen2(camera_list[0], None)
-    else:
-        (status,) = KYFG_CameraOpen2(cameraHandle, None)
+        filtered_camera_list = []
+        for cam in camera_list:
+            (status, camInfo) = KYFG_CameraInfo2(cam)
+            if 'Chameleon' in camInfo.deviceModelName:
+                print(f'Camera {camInfo.deviceModelName} removed from camera list for test')
+                continue
+            filtered_camera_list.append(cam)
+        camera_list = filtered_camera_list
+        # Sequential multi-camera mode:
+        # cameraIndex == -1 -> test all cameras detected on this grabber
+        # cameraIndex >= 0  -> test only that camera index
+        if camera_index == -1:
+            camera_indices = list(range(len(camera_list)))
+        else:
+            camera_indices = [camera_index]
 
-    (status, camera_info) = KYFG_CameraInfo2(cameraHandle)
-    camera_master_link = camera_info.master_link
-    # Select the "CxpConnectionSelector" where camera is connected (i.e master link of the camera)
-    (status, CxpConnectionSelectorMax, CxpConnectionSelectorMin) = KYFG_GetGrabberValueIntMaxMin(grabber_handle, "CxpConnectionSelector")
-    if CxpConnectionSelectorMax < 0:
-        camera_master_link = 0
-    else:
-        (status,) = KYFG_SetGrabberValueInt(grabber_handle, "CxpConnectionSelector", camera_master_link)
-    for i in range(number_of_sent_tests):
-        print('Start Loop', datetime.now().time())
-        (status,) = KYFG_SetCameraValueInt(cameraHandle, "CxpConnectionTestRxPacketCount", 0)
-        (status,) = KYFG_SetCameraValueInt(cameraHandle, "CxpConnectionTestTxPacketCount", 0)
-        (status,) = KYFG_SetCameraValueEnum(cameraHandle, "CxpConnectionTestMode", 1)
-        (status,) = KYFG_SetGrabberValueInt(grabber_handle, "CxpConnectionTestTxPacketCount", 0)
-        (status,) = KYFG_SetGrabberValueInt(grabber_handle, "CxpConnectionTestRxPacketCount", 0)
-        (status,) = KYFG_SetGrabberValueEnum(grabber_handle, "CxpConnectionTestMode", 1)
-        waitFortime(10)
-        (status,) = KYFG_SetCameraValueEnum(cameraHandle, "CxpConnectionTestMode", 0)
-        (status,) = KYFG_SetGrabberValueEnum(grabber_handle, "CxpConnectionTestMode", 0)
-        (status, camera_rx_count) = KYFG_GetCameraValueInt(cameraHandle, "CxpConnectionTestRxPacketCount")
-        (status, camera_tx_count) = KYFG_GetCameraValueInt(cameraHandle, "CxpConnectionTestTxPacketCount")
-        (status, grabber_rx_count) = KYFG_GetGrabberValueInt(grabber_handle, "CxpConnectionTestRxPacketCount")
-        (status, grabber_tx_count) = KYFG_GetGrabberValueInt(grabber_handle, "CxpConnectionTestTxPacketCount")
-        print('Stop Loop', datetime.now().time())
-        print(f'camera_rx_count {camera_rx_count}')
-        print(f'grabber_tx_count {grabber_tx_count}')
-        print(f'camera_tx_count {camera_tx_count}')
-        print(f'grabber_rx_count {grabber_rx_count}')
-        assert camera_rx_count>0, f'camera_rx_count is {camera_rx_count}'
-        assert grabber_tx_count > 0, f'camera_rx_count is {grabber_tx_count}'
-        assert camera_tx_count > 0, f'camera_rx_count is {camera_tx_count}'
-        assert grabber_rx_count > 0, f'camera_rx_count is {grabber_rx_count}'
-    if camera_index == 0:
-        for thread in threads:
-            thread.join()
-    if camera_index==0:
-        assert errorCount==0, 'Not all cameras are successfully working'
+        overall_result = True
 
-    (status,) = KYFG_CameraClose(cameraHandle)
-    (status,) = KYFG_Close(grabber_handle)
-    print(f'\nExiting from CaseRun({args}) with code 0...')
-    return CaseReturnCode.SUCCESS
+        for camera_index_current in camera_indices:
+            if camera_index_current < 0 or camera_index_current >= len(camera_list):
+                print(f"Invalid cameraIndex={camera_index_current}, detected cameras={len(camera_list)}")
+                overall_result = False
+                continue
+
+            result = True
+            cameraHandle = camera_list[camera_index_current]
+
+            try:
+                (status,) = KYFG_CameraOpen2(cameraHandle, None)
+
+                #########################################
+                Reset_camera(cameraHandle, grabberHandle)
+                #########################################
+
+                # Determine master link on the grabber
+                (status, camera_info) = KYFG_CameraInfo2(cameraHandle)
+                grabber_link = int(camera_info.master_link)
+
+                # Select camera on grabber side (important when multiple cameras exist)
+                (status,) = KYFG_SetGrabberValueInt(grabberHandle, "CameraSelector", camera_index_current)
+
+                # Select connection selector on BOTH sides:
+                # - Grabber selector uses grabber link index
+                # - Camera selector typically expects camera-local link index (0 = master for 1-link cameras)
+                (status,) = KYFG_SetGrabberValueInt(grabberHandle, "CxpConnectionSelector", grabber_link)
+                camera_link = 0
+                (status,) = KYFG_SetCameraValueInt(cameraHandle, "CxpConnectionSelector", camera_link)
+
+                for iteration in range(iterations):
+                    # Reset counters BOTH sides
+                    (status,) = KYFG_SetGrabberValueInt(grabberHandle, "CxpConnectionTestTxPacketCount", 0)
+                    (status,) = KYFG_SetGrabberValueInt(grabberHandle, "CxpConnectionTestRxPacketCount", 0)
+                    (status,) = KYFG_SetCameraValueInt(cameraHandle, "CxpConnectionTestRxPacketCount", 0)
+                    (status,) = KYFG_SetCameraValueInt(cameraHandle, "CxpConnectionTestTxPacketCount", 0)
+                    print('\nreset cxp counters of the camera')
+
+                    # Read error counters BEFORE test (delta check)
+                    (status, camera_err_before) = KYFG_GetCameraValueInt(cameraHandle, "CxpConnectionTestErrorCount")
+                    (status, grabber_err_before) = KYFG_GetGrabberValueInt(grabberHandle, "CxpConnectionTestErrorCount")
+
+                    # Enable test mode BOTH sides
+                    (status,) = KYFG_SetGrabberValueEnum(grabberHandle, "CxpConnectionTestMode", 1)
+                    (status,) = KYFG_SetCameraValueEnum(cameraHandle, "CxpConnectionTestMode", 1)
+
+                    time.sleep(random.uniform(min_sleep, max_sleep))
+
+                    # Disable test mode BOTH sides
+                    (status,) = KYFG_SetGrabberValueEnum(grabberHandle, "CxpConnectionTestMode", 0)
+                    (status,) = KYFG_SetCameraValueEnum(cameraHandle, "CxpConnectionTestMode", 0)
+
+                    # Read counters
+                    (status, cam_rx) = KYFG_GetCameraValueInt(cameraHandle, "CxpConnectionTestRxPacketCount")
+                    (status, cam_tx) = KYFG_GetCameraValueInt(cameraHandle, "CxpConnectionTestTxPacketCount")
+                    (status, grab_rx) = KYFG_GetGrabberValueInt(grabberHandle, "CxpConnectionTestRxPacketCount")
+                    (status, grab_tx) = KYFG_GetGrabberValueInt(grabberHandle, "CxpConnectionTestTxPacketCount")
+                    print('Camera rx = ', cam_rx)
+                    print('Camera tx = ', cam_tx)
+                    print('Grabber tx = ', grab_tx)
+                    print('Grabber rx = ', grab_rx)
+
+                    # Read error counters AFTER test (delta check)
+                    (status, camera_err_after) = KYFG_GetCameraValueInt(cameraHandle, "CxpConnectionTestErrorCount")
+                    (status, grabber_err_after) = KYFG_GetGrabberValueInt(grabberHandle, "CxpConnectionTestErrorCount")
+                    print('Camera errors = ', camera_err_after)
+                    print('Grabber errors = ', grabber_err_after)
+
+                    if grabber_err_after != grabber_err_before:
+                        raise RuntimeError(
+                            f"Cam{camera_index_current} Iter{iteration}: grabber_error_count changed {grabber_err_before} -> {grabber_err_after}"
+                        )
+                    if camera_err_after != camera_err_before:
+                        raise RuntimeError(
+                            f"Cam{camera_index_current} Iter{iteration}: camera_error_count changed {camera_err_before} -> {camera_err_after}"
+                        )
+
+                    assert cam_rx == grab_tx, f'Cam{camera_index_current} Iter{iteration}: cam_rx {cam_rx} != grab_tx {grab_tx}'
+                    assert cam_tx == grab_rx, f'Cam{camera_index_current} Iter{iteration}: cam_tx {cam_tx} != grab_rx {grab_rx}'
+
+                print(f"[Device {device_index} / Camera {camera_index_current}] PASS")
+
+            except Exception as e:
+                result = False
+                print(f"[Device {device_index} / Camera {camera_index_current}] FAIL: {e}")
+
+            finally:
+                # Ensure test mode is off on both ends (best-effort)
+                try:
+                    KYFG_SetGrabberValueEnum(grabberHandle, "CxpConnectionTestMode", 0)
+                except Exception:
+                    pass
+                try:
+                    KYFG_SetCameraValueEnum(cameraHandle, "CxpConnectionTestMode", 0)
+                except Exception:
+                    pass
+
+                try:
+                    KYFG_CameraClose(cameraHandle)
+                except Exception:
+                    pass
+
+            if not result:
+                overall_result = False
+
+        return CaseReturnCode.SUCCESS if overall_result else CaseReturnCode.COULD_NOT_RUN
+    finally:
+        (status,) = KYFG_Close(grabberHandle)
+
+
 if __name__ == "__main__":
     try:
+        print("case 2986 Process ID:", os.getpid())
         args_ = ParseArgs()
         return_code = CaseRun(args_)
-        print(f'Case return code: {return_code}')
+        print(f"Case return code: {return_code}")
     except Exception as ex:
         print(f"Exception of type {type(ex)} occurred: {str(ex)}")
-        exit(-200)
+        sys.exit(-200)
 
-    exit(return_code)
-
+    sys.exit(int(return_code))
