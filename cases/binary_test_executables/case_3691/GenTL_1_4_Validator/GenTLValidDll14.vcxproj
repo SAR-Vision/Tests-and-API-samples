@@ -1,0 +1,392 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{FCEBF1C8-830D-4C08-9D9D-85375078BEB7}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>GenTLValidDll14</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>NotSet</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>NotSet</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>NotSet</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>NotSet</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="../../../Changes_for_GenApi_v3_0_0.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="../../../Changes_for_GenApi_v3_0_0.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="../../../Changes_for_GenApi_v3_0_0.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="../../../Changes_for_GenApi_v3_0_0.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.40219.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)$(Platform)\$(Configuration)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)$(Platform)\$(Configuration)\</IntDir>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</LinkIncremental>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</LinkIncremental>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)$(Platform)\$(Configuration)\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)$(Platform)\$(Configuration)\</IntDir>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkIncremental>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
+    <PostBuildEventUseInBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</PostBuildEventUseInBuild>
+    <PostBuildEventUseInBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</PostBuildEventUseInBuild>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>$(GENICAM_ROOT)\library\CPP\include;$(GENICAM_ROOT)\source\GenTL\3rdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;GENICAM_BUILD;GENTLVALIDDLL_EXPORTS;_SCL_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(GENICAM_ROOT)\library\cpp\lib\win32_i86;$(GENICAM_ROOT)\source\GenTL\3rdparty\zlib\projects\visualc10\Win32\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <ModuleDefinitionFile>..\..\src\GenTLValidDLL.def</ModuleDefinitionFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <TargetMachine>MachineX86</TargetMachine>
+      <AdditionalDependencies>zlibd.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent />
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>$(GENICAM_ROOT)\library\CPP\include;$(GENICAM_ROOT)\source\GenTL\3rdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;GENICAM_BUILD;GENTLVALIDDLL_EXPORTS;_SCL_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <MinimalRebuild>false</MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(GENICAM_ROOT)\library\cpp\lib\Win64_x64;$(GENICAM_ROOT)\source\GenTL\3rdparty\zlib\projects\visualc10\x64\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <ModuleDefinitionFile>..\..\src\GenTLValidDLL.def</ModuleDefinitionFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <AdditionalDependencies>zlib_64d.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent />
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(GENICAM_ROOT)\library\CPP\include;$(GENICAM_ROOT)\source\GenTL\3rdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;GENICAM_BUILD;GENTLVALIDDLL_EXPORTS;_SCL_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <MinimalRebuild>false</MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(GENICAM_ROOT)\library\cpp\lib\win32_i86;$(GENICAM_ROOT)\source\GenTL\3rdparty\zlib\projects\visualc10\Win32\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <ModuleDefinitionFile>..\..\src\GenTLValidDLL.def</ModuleDefinitionFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <TargetMachine>MachineX86</TargetMachine>
+      <AdditionalDependencies>zlib.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent />
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(GENICAM_ROOT)\library\CPP\include;$(GENICAM_ROOT)\source\GenTL\3rdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;GENICAM_BUILD;GENTLVALIDDLL_EXPORTS;_SCL_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <MinimalRebuild>false</MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(GENICAM_ROOT)\library\cpp\lib\Win64_x64;$(GENICAM_ROOT)\source\GenTL\3rdparty\zlib\projects\visualc10\x64\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <ModuleDefinitionFile>..\..\src\GenTLValidDLL.def</ModuleDefinitionFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <AdditionalDependencies>zlib_64.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent />
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\src\AccessLock.cpp" />
+    <ClCompile Include="..\..\src\DataStream_DSGetBufferChunkData.cpp" />
+    <ClCompile Include="..\..\src\DataStream_DSGetParentDev.cpp" />
+    <ClCompile Include="..\..\src\Device_DevGetParentIF.cpp" />
+    <ClCompile Include="..\..\src\FileParser.cpp" />
+    <ClCompile Include="..\..\src\FnExport.cpp" />
+    <ClCompile Include="..\..\src\FnExportTest.cpp" />
+    <ClCompile Include="..\..\src\FnExportTestWrapper.cpp" />
+    <ClCompile Include="..\..\src\GenTLTestBoost.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\src\GenTLTestCaseContainer.cpp" />
+    <ClCompile Include="..\..\src\GenTLTestCases.cpp" />
+    <ClCompile Include="..\..\src\GenTLTestParameter.cpp" />
+    <ClCompile Include="..\..\src\GenTLTestSuite.cpp" />
+    <ClCompile Include="..\..\src\GenTLTestTools.cpp" />
+    <ClCompile Include="..\..\src\GenTLUnitTest.cpp" />
+    <ClCompile Include="..\..\src\GenTLValidDLL.cpp" />
+    <ClCompile Include="..\..\src\GenTLZIP.cpp" />
+    <ClCompile Include="..\..\src\Impl_Test2.cpp" />
+    <ClCompile Include="..\..\src\Interface_IFGetParentTL.cpp" />
+    <ClCompile Include="..\..\src\LocalParser.cpp" />
+    <ClCompile Include="..\..\src\Modules.cpp" />
+    <ClCompile Include="..\..\src\Port_PreCondition.cpp" />
+    <ClCompile Include="..\..\src\Signaling_TLParamsLocked.cpp" />
+    <ClCompile Include="..\..\src\URLParser.cpp" />
+    <ClCompile Include="..\..\src\System.cpp" />
+    <ClCompile Include="..\..\src\System_PreCondition.cpp" />
+    <ClCompile Include="..\..\src\System_TLGetInfo.cpp" />
+    <ClCompile Include="..\..\src\System_TLGetInterfaceID.cpp" />
+    <ClCompile Include="..\..\src\System_TLGetInterfaceInfo.cpp" />
+    <ClCompile Include="..\..\src\System_TLGetNumInterfaces.cpp" />
+    <ClCompile Include="..\..\src\System_TLOpenInterface.cpp" />
+    <ClCompile Include="..\..\src\System_TLUpdateInterface.cpp" />
+    <ClCompile Include="..\..\src\SystemTest.cpp" />
+    <ClCompile Include="..\..\src\Library.cpp" />
+    <ClCompile Include="..\..\src\Library_GCGetInfo.cpp" />
+    <ClCompile Include="..\..\src\Library_GetTLInfo.cpp" />
+    <ClCompile Include="..\..\src\Library_PreCondition.cpp" />
+    <ClCompile Include="..\..\src\LibrarySystemSetup.cpp" />
+    <ClCompile Include="..\..\src\LibraryTest.cpp" />
+    <ClCompile Include="..\..\src\Interface.cpp" />
+    <ClCompile Include="..\..\src\Interface_IFGetDeviceID.cpp" />
+    <ClCompile Include="..\..\src\Interface_IFGetDeviceInfo.cpp" />
+    <ClCompile Include="..\..\src\Interface_IFGetInfo.cpp" />
+    <ClCompile Include="..\..\src\Interface_IFGetNumDevices.cpp" />
+    <ClCompile Include="..\..\src\Interface_IFOpenDevice.cpp" />
+    <ClCompile Include="..\..\src\Interface_IFUpdateDeviceList.cpp" />
+    <ClCompile Include="..\..\src\Interface_PreCondition.cpp" />
+    <ClCompile Include="..\..\src\InterfaceTest.cpp" />
+    <ClCompile Include="..\..\src\Device.cpp" />
+    <ClCompile Include="..\..\src\Device_DevGetDataStreamID.cpp" />
+    <ClCompile Include="..\..\src\Device_DevGetInfo.cpp" />
+    <ClCompile Include="..\..\src\Device_DevGetNumDataStreams.cpp" />
+    <ClCompile Include="..\..\src\Device_DevGetPort.cpp" />
+    <ClCompile Include="..\..\src\Device_DevOpenDataStream.cpp" />
+    <ClCompile Include="..\..\src\Device_PreCondition.cpp" />
+    <ClCompile Include="..\..\src\DeviceTest.cpp" />
+    <ClCompile Include="..\..\src\Port.cpp" />
+    <ClCompile Include="..\..\src\Port_GCGetNumPortURLs.cpp" />
+    <ClCompile Include="..\..\src\Port_GCGetPortInfo.cpp" />
+    <ClCompile Include="..\..\src\Port_GCGetPortURL.cpp" />
+    <ClCompile Include="..\..\src\Port_GCGetPortURLInfo.cpp" />
+    <ClCompile Include="..\..\src\Port_GCReadPort.cpp" />
+    <ClCompile Include="..\..\src\Port_GCReadPortStacked.cpp" />
+    <ClCompile Include="..\..\src\Port_GCWritePort.cpp" />
+    <ClCompile Include="..\..\src\Port_GCWritePortStacked.cpp" />
+    <ClCompile Include="..\..\src\DataStream.cpp" />
+    <ClCompile Include="..\..\src\DataStream_DSAllocAndAnnounceBuffer.cpp" />
+    <ClCompile Include="..\..\src\DataStream_DSAnnounceBuffer.cpp" />
+    <ClCompile Include="..\..\src\DataStream_DSFlushQueue.cpp" />
+    <ClCompile Include="..\..\src\DataStream_DSGetBufferID.cpp" />
+    <ClCompile Include="..\..\src\DataStream_DSGetBufferInfo.cpp" />
+    <ClCompile Include="..\..\src\DataStream_DSGetInfo.cpp" />
+    <ClCompile Include="..\..\src\DataStream_DSQueueBuffer.cpp" />
+    <ClCompile Include="..\..\src\DataStream_DSRevokeBuffer.cpp" />
+    <ClCompile Include="..\..\src\DataStream_DSStartAcquisition.cpp" />
+    <ClCompile Include="..\..\src\DataStream_DSStopAcquisition.cpp" />
+    <ClCompile Include="..\..\src\DataStream_PreCondition.cpp" />
+    <ClCompile Include="..\..\src\DataStreamTest.cpp" />
+    <ClCompile Include="..\..\src\Signaling.cpp" />
+    <ClCompile Include="..\..\src\Signaling_EventFlush.cpp" />
+    <ClCompile Include="..\..\src\Signaling_EventGetData.cpp" />
+    <ClCompile Include="..\..\src\Signaling_EventGetDataInfo.cpp" />
+    <ClCompile Include="..\..\src\Signaling_EventGetInfo.cpp" />
+    <ClCompile Include="..\..\src\Signaling_EventKill.cpp" />
+    <ClCompile Include="..\..\src\Signaling_GCRegisterEvent.cpp" />
+    <ClCompile Include="..\..\src\Signaling_GCUnregisterEvent.cpp" />
+    <ClCompile Include="..\..\src\Signaling_PreCondition.cpp" />
+    <ClCompile Include="..\..\src\Signaling_StartDevice.cpp" />
+    <ClCompile Include="..\..\src\Signaling_StopDevice.cpp" />
+    <ClCompile Include="..\..\src\Impl.cpp" />
+    <ClCompile Include="..\..\src\Impl_Test.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\src\AccessLock.h" />
+    <ClInclude Include="..\..\src\DataStream_DSGetBufferChunkData.h" />
+    <ClInclude Include="..\..\src\DataStream_DSGetParentDev.h" />
+    <ClInclude Include="..\..\src\Device_DevGetParentIF.h" />
+    <ClInclude Include="..\..\src\FileParser.h" />
+    <ClInclude Include="..\..\src\FnExport.h" />
+    <ClInclude Include="..\..\src\FnExportTest.h" />
+    <ClInclude Include="..\..\src\FnExportTestWrapper.h" />
+    <ClInclude Include="..\..\src\GenTLTestBoost.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="..\..\src\GenTLTestCaseContainer.h" />
+    <ClInclude Include="..\..\src\GenTLTestCases.h" />
+    <ClInclude Include="..\..\src\GenTLTestParameter.h" />
+    <ClInclude Include="..\..\src\GenTLTestSuite.h" />
+    <ClInclude Include="..\..\src\GenTLTestTimer.h" />
+    <ClInclude Include="..\..\src\GenTLTestTimerBoost.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="..\..\src\GenTLTestTools.h" />
+    <ClInclude Include="..\..\src\GenTLTestUnitTest.h" />
+    <ClInclude Include="..\..\src\GenTLTest_Win.h" />
+    <ClInclude Include="..\..\src\GenTLUnitTest.h" />
+    <ClInclude Include="..\..\src\GenTLValidDLL.h" />
+    <ClInclude Include="..\..\src\GenTLZIP.h" />
+    <ClInclude Include="..\..\src\Impl_Test2.h" />
+    <ClInclude Include="..\..\src\Interface_IFGetParentTL.h" />
+    <ClInclude Include="..\..\src\LocalParser.h" />
+    <ClInclude Include="..\..\src\Modules.h" />
+    <ClInclude Include="..\..\src\Port_PreCondition.h" />
+    <ClInclude Include="..\..\src\SFNCPort.h" />
+    <ClInclude Include="..\..\src\Signaling_TLParamsLocked.h" />
+    <ClInclude Include="..\..\src\URLParser.h" />
+    <ClInclude Include="..\..\src\System.h" />
+    <ClInclude Include="..\..\src\System_PreCondition.h" />
+    <ClInclude Include="..\..\src\System_TLGetInfo.h" />
+    <ClInclude Include="..\..\src\System_TLGetInterfaceID.h" />
+    <ClInclude Include="..\..\src\System_TLGetInterfaceInfo.h" />
+    <ClInclude Include="..\..\src\System_TLGetNumInterfaces.h" />
+    <ClInclude Include="..\..\src\System_TLOpenInterface.h" />
+    <ClInclude Include="..\..\src\System_TLUpdateInterface.h" />
+    <ClInclude Include="..\..\src\SystemTest.h" />
+    <ClInclude Include="..\..\src\Library.h" />
+    <ClInclude Include="..\..\src\Library_GCGetInfo.h" />
+    <ClInclude Include="..\..\src\Library_GetTLInfo.h" />
+    <ClInclude Include="..\..\src\Library_PreCondition.h" />
+    <ClInclude Include="..\..\src\LibrarySystemSetup.h" />
+    <ClInclude Include="..\..\src\LibraryTest.h" />
+    <ClInclude Include="..\..\src\Interface.h" />
+    <ClInclude Include="..\..\src\Interface_IFGetDeviceID.h" />
+    <ClInclude Include="..\..\src\Interface_IFGetDeviceInfo.h" />
+    <ClInclude Include="..\..\src\Interface_IFGetInfo.h" />
+    <ClInclude Include="..\..\src\Interface_IFGetNumDevices.h" />
+    <ClInclude Include="..\..\src\Interface_IFOpenDevice.h" />
+    <ClInclude Include="..\..\src\Interface_IFUpdateDeviceList.h" />
+    <ClInclude Include="..\..\src\Interface_PreCondition.h" />
+    <ClInclude Include="..\..\src\InterfaceTest.h" />
+    <ClInclude Include="..\..\src\Device.h" />
+    <ClInclude Include="..\..\src\Device_DevGetDataStreamID.h" />
+    <ClInclude Include="..\..\src\Device_DevGetInfo.h" />
+    <ClInclude Include="..\..\src\Device_DevGetNumDataStreams.h" />
+    <ClInclude Include="..\..\src\Device_DevGetPort.h" />
+    <ClInclude Include="..\..\src\Device_DevOpenDataStream.h" />
+    <ClInclude Include="..\..\src\Device_PreCondition.h" />
+    <ClInclude Include="..\..\src\DeviceTest.h" />
+    <ClInclude Include="..\..\src\Port.h" />
+    <ClInclude Include="..\..\src\Port_GCGetNumPortURLs.h" />
+    <ClInclude Include="..\..\src\Port_GCGetPortInfo.h" />
+    <ClInclude Include="..\..\src\Port_GCGetPortURL.h" />
+    <ClInclude Include="..\..\src\Port_GCGetPortURLInfo.h" />
+    <ClInclude Include="..\..\src\Port_GCReadPort.h" />
+    <ClInclude Include="..\..\src\Port_GCReadPortStacked.h" />
+    <ClInclude Include="..\..\src\Port_GCWritePort.h" />
+    <ClInclude Include="..\..\src\Port_GCWritePortStacked.h" />
+    <ClInclude Include="..\..\src\DataStream.h" />
+    <ClInclude Include="..\..\src\DataStream_DSAllocAndAnnounceBuffer.h" />
+    <ClInclude Include="..\..\src\DataStream_DSAnnounceBuffer.h" />
+    <ClInclude Include="..\..\src\DataStream_DSFlushQueue.h" />
+    <ClInclude Include="..\..\src\DataStream_DSGetBufferID.h" />
+    <ClInclude Include="..\..\src\DataStream_DSGetBufferInfo.h" />
+    <ClInclude Include="..\..\src\DataStream_DSGetInfo.h" />
+    <ClInclude Include="..\..\src\DataStream_DSQueueBuffer.h" />
+    <ClInclude Include="..\..\src\DataStream_DSRevokeBuffer.h" />
+    <ClInclude Include="..\..\src\DataStream_DSStartAcquisition.h" />
+    <ClInclude Include="..\..\src\DataStream_DSStopAcquisition.h" />
+    <ClInclude Include="..\..\src\DataStream_PreCondition.h" />
+    <ClInclude Include="..\..\src\DataStreamTest.h" />
+    <ClInclude Include="..\..\src\Signaling.h" />
+    <ClInclude Include="..\..\src\Signaling_EventFlush.h" />
+    <ClInclude Include="..\..\src\Signaling_EventGetData.h" />
+    <ClInclude Include="..\..\src\Signaling_EventGetDataInfo.h" />
+    <ClInclude Include="..\..\src\Signaling_EventGetInfo.h" />
+    <ClInclude Include="..\..\src\Signaling_EventKill.h" />
+    <ClInclude Include="..\..\src\Signaling_GCRegisterEvent.h" />
+    <ClInclude Include="..\..\src\Signaling_GCUnregisterEvent.h" />
+    <ClInclude Include="..\..\src\Signaling_PreCondition.h" />
+    <ClInclude Include="..\..\src\Signaling_StartDevice.h" />
+    <ClInclude Include="..\..\src\Signaling_StopDevice.h" />
+    <ClInclude Include="..\..\src\Impl.h" />
+    <ClInclude Include="..\..\src\Impl_Test.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuildStep Include="..\..\src\GenTLValidDLL.def" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

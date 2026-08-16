@@ -1,0 +1,76 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros">
+    <GENICAM_ROOT>$(KAYA_3RD_PARTY_SW_ROOT)\GenICam_v3_2</GENICAM_ROOT>
+    <GENICAM_TOOLSET_VERSION>141</GENICAM_TOOLSET_VERSION>
+  </PropertyGroup>
+  <PropertyGroup>
+    <CustomBuildBeforeTargets>
+    </CustomBuildBeforeTargets>
+    <OutDir>$(ProjectDir)$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)$(Platform)\$(Configuration)\Intermediate\</IntDir>
+    <CustomBuildAfterTargets>Clean</CustomBuildAfterTargets>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalOptions>-DGENICAM_COMPILER=VC$(GENICAM_TOOLSET_VERSION) %(AdditionalOptions)</AdditionalOptions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MinimalRebuild>false</MinimalRebuild>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile> 
+    <PostBuildEvent>
+      <Command>if "32"=="$(PlatformArchitecture)" (set arch=Win32_i86)
+if "64"=="$(PlatformArchitecture)" (set arch=Win64_x64)
+
+set GENICAM_ROOT_LIBRARY=$(KAYA_3RD_PARTY_SW_ROOT)\GenICam_v3_2\library
+set GENICAM_TOOLSET_VERSION=141
+
+echo from %GENICAM_ROOT_LIBRARY%\bin\%arch%\
+echo to "$(OutDir)"
+
+rem if not exist $(OutputPath) mkdir $(OutputPath)
+
+echo "%GENICAM_ROOT_LIBRARY%\bin\%arch%\GCBase_MD%d%_VC$(GENICAM_TOOLSET_VERSION)_v3_2.dll"
+copy "%GENICAM_ROOT_LIBRARY%\bin\%arch%\GCBase_MD%d%_VC$(GENICAM_TOOLSET_VERSION)_v3_2.dll" "$(OutDir)"
+
+echo "%GENICAM_ROOT_LIBRARY%\bin\%arch%\GenApi_MD%d%_VC$(GENICAM_TOOLSET_VERSION)_v3_2.dll"
+copy "%GENICAM_ROOT_LIBRARY%\bin\%arch%\GenApi_MD%d%_VC$(GENICAM_TOOLSET_VERSION)_v3_2.dll" "$(OutDir)"
+
+echo "%GENICAM_ROOT_LIBRARY%\bin\%arch%\Log_MD%d%_VC$(GENICAM_TOOLSET_VERSION)_v3_2.dll"
+copy "%GENICAM_ROOT_LIBRARY%\bin\%arch%\Log_MD%d%_VC$(GENICAM_TOOLSET_VERSION)_v3_2.dll" "$(OutDir)"
+
+echo "%GENICAM_ROOT_LIBRARY%\bin\%arch%\log4cpp_MD%d%_VC$(GENICAM_TOOLSET_VERSION)_v3_2.dll"
+copy "%GENICAM_ROOT_LIBRARY%\bin\%arch%\log4cpp_MD%d%_VC$(GENICAM_TOOLSET_VERSION)_v3_2.dll" "$(OutDir)"
+
+echo "%GENICAM_ROOT_LIBRARY%\bin\%arch%\MathParser_MD%d%_VC$(GENICAM_TOOLSET_VERSION)_v3_2.dll"
+copy "%GENICAM_ROOT_LIBRARY%\bin\%arch%\MathParser_MD%d%_VC$(GENICAM_TOOLSET_VERSION)_v3_2.dll" "$(OutDir)"
+
+echo "%GENICAM_ROOT_LIBRARY%\bin\%arch%\NodeMapData_MD%d%_VC$(GENICAM_TOOLSET_VERSION)_v3_2.dll"
+copy "%GENICAM_ROOT_LIBRARY%\bin\%arch%\NodeMapData_MD%d%_VC$(GENICAM_TOOLSET_VERSION)_v3_2.dll" "$(OutDir)"
+
+echo "%GENICAM_ROOT_LIBRARY%\bin\%arch%\XmlParser_MD%d%_VC$(GENICAM_TOOLSET_VERSION)_v3_2.dll"
+copy "%GENICAM_ROOT_LIBRARY%\bin\%arch%\XmlParser_MD%d%_VC$(GENICAM_TOOLSET_VERSION)_v3_2.dll" "$(OutDir)"
+
+if exist "$(SolutionDir)$(Platform)\$(Configuration)" copy "$(OutDir)*.dll" "$(SolutionDir)$(Platform)\$(Configuration)"
+
+xcopy "$(SolutionDir)\*.bat" "$(OutDir)" /Y /I /D
+
+mkdir "$(OutDir)\report"
+</Command>
+      <Message>Copy all dependent dlls</Message>
+    </PostBuildEvent>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+      <Message>
+      </Message>
+    </PreBuildEvent>
+    <CustomBuildStep>
+      <Message>
+      </Message>
+      <Outputs>empty</Outputs>
+    </CustomBuildStep>
+  </ItemDefinitionGroup>
+  <ItemGroup />
+</Project>

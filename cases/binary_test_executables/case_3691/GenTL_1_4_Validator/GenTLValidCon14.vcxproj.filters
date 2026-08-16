@@ -1,0 +1,636 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="DataStream_Header">
+      <UniqueIdentifier>{e43b56d0-308d-4728-8a5a-ff9a52b13d00}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="DataStream_Source">
+      <UniqueIdentifier>{60081955-bb19-4f49-8ba8-8d151e8e7c2d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Device_Header">
+      <UniqueIdentifier>{1652e384-fb1c-4b0e-b959-6f6b51b04c2f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Device_Source">
+      <UniqueIdentifier>{2b740a8d-14a9-4e76-839f-b41b819f01f4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Impl_Header">
+      <UniqueIdentifier>{8fc0755e-6d25-4055-82d3-9f52f4a63024}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Impl_Source">
+      <UniqueIdentifier>{a66b117f-d397-4af1-b5a7-81ff675e79f2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Interface_Header">
+      <UniqueIdentifier>{81173163-f00f-400b-bba8-77c29dcf7fa1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Interface_Source">
+      <UniqueIdentifier>{b163f1c9-914f-4675-9312-9edaeab98ad4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Library_Header">
+      <UniqueIdentifier>{021df917-fe7d-49f2-97ce-f5f0f95ec47d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Library_Source">
+      <UniqueIdentifier>{4d373b5a-4b22-4ed6-b862-62d5aa7b0832}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Port_Header">
+      <UniqueIdentifier>{84044ac1-c76f-49d5-8b55-e2a26c80e826}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Port_Source">
+      <UniqueIdentifier>{03b1ebd1-9cb1-44bb-8faa-88cf8aff2cc0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Signaling_Header">
+      <UniqueIdentifier>{1830d3ee-3d62-4934-bb90-5ccbbf801daa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Signaling_Source">
+      <UniqueIdentifier>{f42b5ba9-2ad3-461d-a2f2-75219fae2e22}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="System_Header">
+      <UniqueIdentifier>{74b71f12-6b4b-4248-af2d-0c653056e0fd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="System_Source">
+      <UniqueIdentifier>{21b71b81-d29c-4016-ae7b-6758057fdfae}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\DataStream.h">
+      <Filter>DataStream_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\DataStream_DSAllocAndAnnounceBuffer.h">
+      <Filter>DataStream_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\DataStream_DSAnnounceBuffer.h">
+      <Filter>DataStream_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\DataStream_DSFlushQueue.h">
+      <Filter>DataStream_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\DataStream_DSGetBufferID.h">
+      <Filter>DataStream_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\DataStream_DSGetBufferInfo.h">
+      <Filter>DataStream_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\DataStream_DSGetInfo.h">
+      <Filter>DataStream_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\DataStream_DSQueueBuffer.h">
+      <Filter>DataStream_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\DataStream_DSRevokeBuffer.h">
+      <Filter>DataStream_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\DataStream_DSStartAcquisition.h">
+      <Filter>DataStream_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\DataStream_DSStopAcquisition.h">
+      <Filter>DataStream_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\DataStream_PreCondition.h">
+      <Filter>DataStream_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\DataStreamTest.h">
+      <Filter>DataStream_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Device.h">
+      <Filter>Device_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Device_DevGetDataStreamID.h">
+      <Filter>Device_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Device_DevGetInfo.h">
+      <Filter>Device_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Device_DevGetNumDataStreams.h">
+      <Filter>Device_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Device_DevGetPort.h">
+      <Filter>Device_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Device_DevOpenDataStream.h">
+      <Filter>Device_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Device_PreCondition.h">
+      <Filter>Device_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\DeviceTest.h">
+      <Filter>Device_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\FileParser.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\URLParser.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\FnExport.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\FnExportTest.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\FnExportTestWrapper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GenTLTestBoost.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GenTLTestCases.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GenTLTestParameter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GenTLTestSuite.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GenTLTestTools.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GenTLValidDLL.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\LocalParser.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Modules.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\SFNCPort.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Impl.h">
+      <Filter>Impl_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Impl_Test.h">
+      <Filter>Impl_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface.h">
+      <Filter>Interface_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface_IFGetDeviceID.h">
+      <Filter>Interface_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface_IFGetDeviceInfo.h">
+      <Filter>Interface_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface_IFGetInfo.h">
+      <Filter>Interface_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface_IFGetNumDevices.h">
+      <Filter>Interface_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface_IFOpenDevice.h">
+      <Filter>Interface_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface_IFUpdateDeviceList.h">
+      <Filter>Interface_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface_PreCondition.h">
+      <Filter>Interface_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\InterfaceTest.h">
+      <Filter>Interface_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Library.h">
+      <Filter>Library_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Library_GCGetInfo.h">
+      <Filter>Library_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Library_GetTLInfo.h">
+      <Filter>Library_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Library_PreCondition.h">
+      <Filter>Library_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\LibrarySystemSetup.h">
+      <Filter>Library_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\LibraryTest.h">
+      <Filter>Library_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Port_PreCondition.h">
+      <Filter>Port_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Port.h">
+      <Filter>Port_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Port_GCGetNumPortURLs.h">
+      <Filter>Port_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Port_GCGetPortInfo.h">
+      <Filter>Port_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Port_GCGetPortURL.h">
+      <Filter>Port_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Port_GCGetPortURLInfo.h">
+      <Filter>Port_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Port_GCReadPort.h">
+      <Filter>Port_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Port_GCReadPortStacked.h">
+      <Filter>Port_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Port_GCWritePort.h">
+      <Filter>Port_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Port_GCWritePortStacked.h">
+      <Filter>Port_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Signaling_TLParamsLocked.h">
+      <Filter>Signaling_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Signaling.h">
+      <Filter>Signaling_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Signaling_EventFlush.h">
+      <Filter>Signaling_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Signaling_EventGetData.h">
+      <Filter>Signaling_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Signaling_EventGetDataInfo.h">
+      <Filter>Signaling_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Signaling_EventGetInfo.h">
+      <Filter>Signaling_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Signaling_EventKill.h">
+      <Filter>Signaling_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Signaling_GCRegisterEvent.h">
+      <Filter>Signaling_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Signaling_GCUnregisterEvent.h">
+      <Filter>Signaling_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Signaling_PreCondition.h">
+      <Filter>Signaling_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Signaling_StartDevice.h">
+      <Filter>Signaling_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Signaling_StopDevice.h">
+      <Filter>Signaling_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\System.h">
+      <Filter>System_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\System_PreCondition.h">
+      <Filter>System_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\System_TLGetInfo.h">
+      <Filter>System_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\System_TLGetInterfaceID.h">
+      <Filter>System_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\System_TLGetInterfaceInfo.h">
+      <Filter>System_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\System_TLGetNumInterfaces.h">
+      <Filter>System_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\System_TLOpenInterface.h">
+      <Filter>System_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\System_TLUpdateInterface.h">
+      <Filter>System_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\SystemTest.h">
+      <Filter>System_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\DataStream_DSGetBufferChunkData.h">
+      <Filter>DataStream_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Impl_Test2.h">
+      <Filter>Impl_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\TLValidMessages.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GenTLTestTimer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GenTLZIP.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GenTLTestTimerBoost.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\AccessLock.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GenTLTestCaseContainer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GenTLTestUnitTest.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GenTLUnitTest.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GenTLTest_Win.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\DataStream_DSGetParentDev.h">
+      <Filter>DataStream_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interface_IFGetParentTL.h">
+      <Filter>Interface_Header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Device_DevGetParentIF.h">
+      <Filter>Device_Header</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\DataStream.cpp">
+      <Filter>DataStream_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\DataStream_DSAllocAndAnnounceBuffer.cpp">
+      <Filter>DataStream_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\DataStream_DSAnnounceBuffer.cpp">
+      <Filter>DataStream_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\DataStream_DSFlushQueue.cpp">
+      <Filter>DataStream_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\DataStream_DSGetBufferID.cpp">
+      <Filter>DataStream_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\DataStream_DSGetBufferInfo.cpp">
+      <Filter>DataStream_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\DataStream_DSGetInfo.cpp">
+      <Filter>DataStream_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\DataStream_DSQueueBuffer.cpp">
+      <Filter>DataStream_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\DataStream_DSRevokeBuffer.cpp">
+      <Filter>DataStream_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\DataStream_DSStartAcquisition.cpp">
+      <Filter>DataStream_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\DataStream_DSStopAcquisition.cpp">
+      <Filter>DataStream_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\DataStream_PreCondition.cpp">
+      <Filter>DataStream_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\DataStreamTest.cpp">
+      <Filter>DataStream_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Device.cpp">
+      <Filter>Device_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Device_DevGetDataStreamID.cpp">
+      <Filter>Device_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Device_DevGetInfo.cpp">
+      <Filter>Device_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Device_DevGetNumDataStreams.cpp">
+      <Filter>Device_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Device_DevGetPort.cpp">
+      <Filter>Device_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Device_DevOpenDataStream.cpp">
+      <Filter>Device_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Device_PreCondition.cpp">
+      <Filter>Device_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\DeviceTest.cpp">
+      <Filter>Device_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Impl.cpp">
+      <Filter>Impl_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Impl_Test.cpp">
+      <Filter>Impl_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface.cpp">
+      <Filter>Interface_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface_IFGetDeviceID.cpp">
+      <Filter>Interface_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface_IFGetDeviceInfo.cpp">
+      <Filter>Interface_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface_IFGetInfo.cpp">
+      <Filter>Interface_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface_IFGetNumDevices.cpp">
+      <Filter>Interface_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface_IFOpenDevice.cpp">
+      <Filter>Interface_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface_IFUpdateDeviceList.cpp">
+      <Filter>Interface_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface_PreCondition.cpp">
+      <Filter>Interface_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\InterfaceTest.cpp">
+      <Filter>Interface_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Library.cpp">
+      <Filter>Library_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Library_GCGetInfo.cpp">
+      <Filter>Library_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Library_GetTLInfo.cpp">
+      <Filter>Library_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Library_PreCondition.cpp">
+      <Filter>Library_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\LibrarySystemSetup.cpp">
+      <Filter>Library_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\LibraryTest.cpp">
+      <Filter>Library_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Port_PreCondition.cpp">
+      <Filter>Port_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Port.cpp">
+      <Filter>Port_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Port_GCGetNumPortURLs.cpp">
+      <Filter>Port_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Port_GCGetPortInfo.cpp">
+      <Filter>Port_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Port_GCGetPortURL.cpp">
+      <Filter>Port_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Port_GCGetPortURLInfo.cpp">
+      <Filter>Port_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Port_GCReadPort.cpp">
+      <Filter>Port_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Port_GCReadPortStacked.cpp">
+      <Filter>Port_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Port_GCWritePort.cpp">
+      <Filter>Port_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Port_GCWritePortStacked.cpp">
+      <Filter>Port_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Signaling_TLParamsLocked.cpp">
+      <Filter>Signaling_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Signaling.cpp">
+      <Filter>Signaling_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Signaling_EventFlush.cpp">
+      <Filter>Signaling_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Signaling_EventGetData.cpp">
+      <Filter>Signaling_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Signaling_EventGetDataInfo.cpp">
+      <Filter>Signaling_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Signaling_EventGetInfo.cpp">
+      <Filter>Signaling_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Signaling_EventKill.cpp">
+      <Filter>Signaling_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Signaling_GCRegisterEvent.cpp">
+      <Filter>Signaling_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Signaling_GCUnregisterEvent.cpp">
+      <Filter>Signaling_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Signaling_PreCondition.cpp">
+      <Filter>Signaling_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Signaling_StartDevice.cpp">
+      <Filter>Signaling_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Signaling_StopDevice.cpp">
+      <Filter>Signaling_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\FileParser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\URLParser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\FnExport.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\FnExportTest.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\FnExportTestWrapper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GenTLTestBoost.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GenTLTestCases.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GenTLTestParameter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GenTLTestSuite.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GenTLTestTools.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GenTLValidDLL.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\LocalParser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Modules.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\System.cpp">
+      <Filter>System_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\System_PreCondition.cpp">
+      <Filter>System_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\System_TLGetInfo.cpp">
+      <Filter>System_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\System_TLGetInterfaceID.cpp">
+      <Filter>System_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\System_TLGetInterfaceInfo.cpp">
+      <Filter>System_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\System_TLGetNumInterfaces.cpp">
+      <Filter>System_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\System_TLOpenInterface.cpp">
+      <Filter>System_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\System_TLUpdateInterface.cpp">
+      <Filter>System_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SystemTest.cpp">
+      <Filter>System_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GenTLValidConsole.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\DataStream_DSGetBufferChunkData.cpp">
+      <Filter>DataStream_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Impl_Test2.cpp">
+      <Filter>Impl_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GenTLZIP.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\AccessLock.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GenTLTestCaseContainer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GenTLUnitTest.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\DataStream_DSGetParentDev.cpp">
+      <Filter>DataStream_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Interface_IFGetParentTL.cpp">
+      <Filter>Interface_Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Device_DevGetParentIF.cpp">
+      <Filter>Device_Source</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

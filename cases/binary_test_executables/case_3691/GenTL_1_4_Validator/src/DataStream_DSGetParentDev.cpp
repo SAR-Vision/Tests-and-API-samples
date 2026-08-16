@@ -1,0 +1,543 @@
+//-----------------------------------------------------------------------------
+//  (c) 2012 by Allied Vision Technologies GmbH
+//  Project: GenTLValidation
+//  Author:  SVW
+//
+//  License: This file is published under the license of the EMVA GenICam  Standard Group.
+//  A text file describing the legal terms is included in  your installation as 'GenICam_license.pdf'.
+//  If for some reason you are missing  this file please contact the EMVA or visit the website
+//  (http://www.genicam.org) for a full copy.
+//
+//  THIS SOFTWARE IS PROVIDED BY THE EMVA GENICAM STANDARD GROUP "AS IS"
+//  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+//  THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+//  PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE EMVA GENICAM STANDARD  GROUP
+//  OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,  SPECIAL,
+//  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT  LIMITED TO,
+//  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,  DATA, OR PROFITS;
+//  OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY  THEORY OF LIABILITY,
+//  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT  (INCLUDING NEGLIGENCE OR OTHERWISE)
+//  ARISING IN ANY WAY OUT OF THE USE  OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+//  POSSIBILITY OF SUCH DAMAGE.
+//-----------------------------------------------------------------------------
+
+#include <string>
+
+#include "GenApi/GenApi.h"
+
+#include "DataStream_DSGetParentDev.h"
+#include "LibrarySystemSetup.h"
+#include "Interface_PreCondition.h"
+#include "Device_PreCondition.h"
+#include "DataStream_PreCondition.h"
+#include "GenTLTestTools.h"
+
+using namespace GenICam;
+using namespace GenICam::Client;
+
+////////////////////////////////////////////////////////////////////////////////////////////
+// constructor / destructor
+////////////////////////////////////////////////////////////////////////////////////////////
+
+DataStream_DSGetParentDev::DataStream_DSGetParentDev()
+{
+}
+
+DataStream_DSGetParentDev::~DataStream_DSGetParentDev()
+{
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////
+// CPP unit test leading and trailing functions
+////////////////////////////////////////////////////////////////////////////////////////////
+
+void DataStream_DSGetParentDev::setUp(void)
+{
+}
+
+void DataStream_DSGetParentDev::tearDown(void)
+{
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////
+// Test IFOpenDevice
+////////////////////////////////////////////////////////////////////////////////////////////
+
+void DataStream_DSGetParentDev::TestDSGetParentDev( uint32_t test_id )
+{
+    GENTLTEST_DESCRIPTION(test_id, "Test standard DSGetParentDev");
+    LibrarySystemSetup                  oLibSysSetup;
+    System_PreCondition::tStringVector  xInterfaceList=oLibSysSetup.xGetTLInterfaceList();
+    int                                 nTotalNumberOfTests = 0;
+    
+    for (uint32_t index1=0; index1<xInterfaceList.size(); index1++)
+    {
+        uint32_t                uiNumDevices = 0;
+        IF_HANDLE               hIF = GENTL_INVALID_HANDLE;
+        Interface_PreCondition  oIFPreCondition(oLibSysSetup.hGetTLHandle(), xInterfaceList[index1], &hIF);
+
+        uiNumDevices = oIFPreCondition.zGetIFNumberOfDevices();
+        
+        for (uint32_t index2=0; index2<uiNumDevices; index2++)
+        {
+            std::string             sDeviceID = oIFPreCondition.sGetDeviceID(hIF, index2);
+
+            for (DEVICE_ACCESS_FLAGS_LIST eAccess=DEVICE_ACCESS_CONTROL; eAccess<=DEVICE_ACCESS_EXCLUSIVE; eAccess=(DEVICE_ACCESS_FLAGS_LIST)(eAccess+1))
+            {
+                DEV_HANDLE              hDevice = GENTL_INVALID_HANDLE;
+                Device_PreCondition     oDevPreCondition(hIF, sDeviceID, eAccess, &hDevice);
+
+                if (oDevPreCondition.eGetLastResult() >= GC_ERR_SUCCESS)
+                {
+                    uint32_t        uiNumDataStreams = oDevPreCondition.uiGetNumDataStreams();
+                    
+                    for (uint32_t index3=0; index3<uiNumDataStreams; index3++)
+                    {
+                        DS_HANDLE               hDs = GENTL_INVALID_HANDLE;
+                        std::string             sDataStreamID = oDevPreCondition.sGetDataStreamID(hDevice, index3);
+                        DataStream_PreCondition oDSPreCondition(hDevice, sDataStreamID, &hDs);
+                        DEV_HANDLE              hDev = GENTL_INVALID_HANDLE;
+                        GC_ERROR                Result = GC_ERR_SUCCESS;
+                                
+                        Result = m_ModDS.eDSGetParentDev(hDs, &hDev);
+                                
+                        GENTLTEST_CHECK_MESSAGE("DSGetParentDev DataStreamID=" << sDataStreamID.c_str() << 
+                                " DeviceID=" << sDeviceID.c_str() << 
+                                " device access=" << sConvertDEVICEAccess2String(eAccess).c_str() <<
+                                " failed. Expected >= GC_ERR_SUCCESS, received " << sConvertGCError2String(Result).c_str(), 
+                                Result >= GC_ERR_SUCCESS);
+        
+                        if (Result >= GC_ERR_SUCCESS)
+                        {
+                            GENTLTEST_CHECK_MESSAGE("DSGetParentDev failed. Expected handle=0x" << std::hex << hDevice << " , received 0x" << hDev, 
+                                    hDev == hDevice);
+                        }
+
+                        nTotalNumberOfTests++;
+                    }
+                }
+            }
+        }
+    }
+    
+    GENTLTEST_CHECK_MESSAGE("DSGetParentDev failed. No datastream available", nTotalNumberOfTests > 0);
+
+    GENTLTEST_PRINT_RESULT(test_id);
+}
+
+void DataStream_DSGetParentDev::TestDSGetParentDevWithoutGCInitLib( uint32_t test_id )
+{
+    GENTLTEST_DESCRIPTION(test_id, "Test DSGetParentDev with closed library before");
+    LibrarySystemSetup          oLibSysSetup;
+    tDataStreamList             vecDataStreamList;
+    tDataStreamList::iterator   xIter;
+    
+    vCreateTestCaseList(oLibSysSetup, vecDataStreamList);
+
+    for (xIter=vecDataStreamList.begin(); xIter!=vecDataStreamList.end(); xIter++)
+    {
+        GC_ERROR                Result = GC_ERR_SUCCESS;
+        DEV_HANDLE              hDevice = GENTL_INVALID_HANDLE;
+        IF_HANDLE               hIF = GENTL_INVALID_HANDLE;
+        stDataStream            sDS = (stDataStream)*xIter;
+        Interface_PreCondition  oIFPreCondition(oLibSysSetup.hGetTLHandle(), sDS.sInterfaceID, &hIF);
+        Device_PreCondition     oDevPreCondition(hIF, sDS.sDeviceID, sDS.eAccess, &hDevice);
+
+        if (oDevPreCondition.eGetLastResult() >= GC_ERR_SUCCESS)
+        {
+            DS_HANDLE               hDs = GENTL_INVALID_HANDLE;
+            DEV_HANDLE              hDev = GENTL_INVALID_HANDLE;
+            DataStream_PreCondition oDSPreCondition(hDevice, sDS.sDataStreamID, &hDs);
+            
+            oLibSysSetup.tearDownLibrary();
+        
+            Result = m_ModDS.eDSGetParentDev(hDs, &hDev);
+            
+            GENTLTEST_CHECK_RESULT("Note: DSGetParentDev DataStreamID=" << sDS.sDataStreamID.c_str() << 
+                " DeviceID=" << sDS.sDeviceID.c_str() << 
+                " device access=" << sConvertDEVICEAccess2String(sDS.eAccess).c_str() <<
+                " recommended return value == GC_ERR_NOT_INITIALIZED, received " << sConvertGCError2String(Result).c_str(), 
+                Result == GC_ERR_NOT_INITIALIZED,
+                "DSGetParentDev DataStreamID=" << sDS.sDataStreamID.c_str() << 
+                " device access=" << sConvertDEVICEAccess2String(sDS.eAccess).c_str() <<
+                " DeviceID=" << sDS.sDeviceID.c_str() << 
+                " failed. Expected < GC_ERR_SUCCESS, received " << sConvertGCError2String(Result).c_str(), 
+                Result < GC_ERR_SUCCESS);
+
+            if (Result < GC_ERR_SUCCESS)
+            {
+                GENTLTEST_CHECK_MESSAGE("Parameter after call hDev != GENTL_INVALID_HANDLE", hDev == GENTL_INVALID_HANDLE);
+            }
+            
+            oLibSysSetup.tearDownSystem();
+            oLibSysSetup.setUp();
+        }
+    }
+
+    GENTLTEST_PRINT_RESULT(test_id);
+}
+
+void DataStream_DSGetParentDev::TestDSGetParentDevWithoutTLOpen( uint32_t test_id )
+{
+    GENTLTEST_DESCRIPTION(test_id, "Test DSGetParentDev with closed system before");
+    LibrarySystemSetup          oLibSysSetup;
+    tDataStreamList             vecDataStreamList;
+    tDataStreamList::iterator   xIter;
+    
+    vCreateTestCaseList(oLibSysSetup, vecDataStreamList);
+
+    for (xIter=vecDataStreamList.begin(); xIter!=vecDataStreamList.end(); xIter++)
+    {
+        GC_ERROR                Result = GC_ERR_SUCCESS;
+        DEV_HANDLE              hDevice = GENTL_INVALID_HANDLE;
+        IF_HANDLE               hIF = GENTL_INVALID_HANDLE;
+        stDataStream            sDS = (stDataStream)*xIter;
+        Interface_PreCondition  oIFPreCondition(oLibSysSetup.hGetTLHandle(), sDS.sInterfaceID, &hIF);
+        Device_PreCondition     oDevPreCondition(hIF, sDS.sDeviceID, sDS.eAccess, &hDevice);
+
+        if (oDevPreCondition.eGetLastResult() >= GC_ERR_SUCCESS)
+        {
+            DS_HANDLE               hDs = GENTL_INVALID_HANDLE;
+            DEV_HANDLE              hDev = GENTL_INVALID_HANDLE;
+            DataStream_PreCondition oDSPreCondition(hDevice, sDS.sDataStreamID, &hDs);
+            
+            oLibSysSetup.tearDownSystem();
+        
+            Result = m_ModDS.eDSGetParentDev(hDs, &hDev);
+            
+            GENTLTEST_CHECK_RESULT("Note: DSGetParentDev DataStreamID=" << sDS.sDataStreamID.c_str() << 
+                " DeviceID=" << sDS.sDeviceID.c_str() << 
+                " device access=" << sConvertDEVICEAccess2String(sDS.eAccess).c_str() <<
+                " recommended return value == GC_ERR_NOT_INITIALIZED or == GC_ERR_INVALID_PARAMETER, received " << sConvertGCError2String(Result).c_str(), 
+                Result == GC_ERR_INVALID_HANDLE || Result == GC_ERR_INVALID_PARAMETER,
+                "DSGetParentDev DataStreamID=" << sDS.sDataStreamID.c_str() << 
+                " device access=" << sConvertDEVICEAccess2String(sDS.eAccess).c_str() <<
+                " DeviceID=" << sDS.sDeviceID.c_str() << 
+                " failed. Expected < GC_ERR_SUCCESS, received " << sConvertGCError2String(Result).c_str(), 
+                Result < GC_ERR_SUCCESS);
+
+            if (Result < GC_ERR_SUCCESS)
+            {
+                GENTLTEST_CHECK_MESSAGE("Parameter after call hDev != GENTL_INVALID_HANDLE", hDev == GENTL_INVALID_HANDLE);
+            }
+            
+            oLibSysSetup.setUpSystem();
+        }
+    }
+
+    GENTLTEST_PRINT_RESULT(test_id);
+}
+
+void DataStream_DSGetParentDev::TestDSGetParentDevWithoutIFOpen( uint32_t test_id )
+{
+    GENTLTEST_DESCRIPTION(test_id, "Test DSGetParentDev with closed interface before");
+    LibrarySystemSetup          oLibSysSetup;
+    tDataStreamList             vecDataStreamList;
+    tDataStreamList::iterator   xIter;
+    
+    vCreateTestCaseList(oLibSysSetup, vecDataStreamList);
+
+    for (xIter=vecDataStreamList.begin(); xIter!=vecDataStreamList.end(); xIter++)
+    {
+        GC_ERROR                Result = GC_ERR_SUCCESS;
+        DEV_HANDLE              hDevice = GENTL_INVALID_HANDLE;
+        IF_HANDLE               hIF = GENTL_INVALID_HANDLE;
+        stDataStream            sDS = (stDataStream)*xIter;
+        Interface_PreCondition  oIFPreCondition(oLibSysSetup.hGetTLHandle(), sDS.sInterfaceID, &hIF);
+        Device_PreCondition     oDevPreCondition(hIF, sDS.sDeviceID, sDS.eAccess, &hDevice);
+
+        if (oDevPreCondition.eGetLastResult() >= GC_ERR_SUCCESS)
+        {
+            DS_HANDLE               hDs = GENTL_INVALID_HANDLE;
+            DEV_HANDLE              hDev = GENTL_INVALID_HANDLE;
+            DataStream_PreCondition oDSPreCondition(hDevice, sDS.sDataStreamID, &hDs);
+            
+            oIFPreCondition.vClose();
+        
+            Result = m_ModDS.eDSGetParentDev(hDs, &hDev);
+            
+            GENTLTEST_CHECK_RESULT("Note: DSGetParentDev DataStreamID=" << sDS.sDataStreamID.c_str() << 
+                " DeviceID=" << sDS.sDeviceID.c_str() << 
+                " device access=" << sConvertDEVICEAccess2String(sDS.eAccess).c_str() <<
+                " recommended return value == GC_ERR_NOT_INITIALIZED or == GC_ERR_INVALID_PARAMETER, received " << sConvertGCError2String(Result).c_str(), 
+                Result == GC_ERR_INVALID_HANDLE || Result == GC_ERR_INVALID_PARAMETER,
+                "DSGetParentDev DataStreamID=" << sDS.sDataStreamID.c_str() << 
+                " device access=" << sConvertDEVICEAccess2String(sDS.eAccess).c_str() <<
+                " DeviceID=" << sDS.sDeviceID.c_str() << 
+                " failed. Expected < GC_ERR_SUCCESS, received " << sConvertGCError2String(Result).c_str(), 
+                Result < GC_ERR_SUCCESS);
+
+            if (Result < GC_ERR_SUCCESS)
+            {
+                GENTLTEST_CHECK_MESSAGE("Parameter after call hDev != GENTL_INVALID_HANDLE", hDev == GENTL_INVALID_HANDLE);
+            }
+        }
+    }
+    
+    GENTLTEST_PRINT_RESULT(test_id);
+}
+
+void DataStream_DSGetParentDev::TestDSGetParentDevWithOldHandle( uint32_t test_id )
+{
+    GENTLTEST_DESCRIPTION(test_id, "Test DSGetParentDev with closed device before");
+    LibrarySystemSetup          oLibSysSetup;
+    tDataStreamList             vecDataStreamList;
+    tDataStreamList::iterator   xIter;
+    
+    vCreateTestCaseList(oLibSysSetup, vecDataStreamList);
+
+    for (xIter=vecDataStreamList.begin(); xIter!=vecDataStreamList.end(); xIter++)
+    {
+        GC_ERROR                Result = GC_ERR_SUCCESS;
+        DEV_HANDLE              hDevice = GENTL_INVALID_HANDLE;
+        IF_HANDLE               hIF = GENTL_INVALID_HANDLE;
+        stDataStream            sDS = (stDataStream)*xIter;
+        Interface_PreCondition  oIFPreCondition(oLibSysSetup.hGetTLHandle(), sDS.sInterfaceID, &hIF);
+        Device_PreCondition     oDevPreCondition(hIF, sDS.sDeviceID, sDS.eAccess, &hDevice);
+
+        if (oDevPreCondition.eGetLastResult() >= GC_ERR_SUCCESS)
+        {
+            DS_HANDLE               hDs = GENTL_INVALID_HANDLE;
+            DEV_HANDLE              hDev = GENTL_INVALID_HANDLE;
+            DataStream_PreCondition oDSPreCondition(hDevice, sDS.sDataStreamID, &hDs);
+            
+            oDevPreCondition.vClose();
+        
+            Result = m_ModDS.eDSGetParentDev(hDs, &hDev);
+            
+            GENTLTEST_CHECK_RESULT("Note: DSGetParentDev DataStreamID=" << sDS.sDataStreamID.c_str() << 
+                " DeviceID=" << sDS.sDeviceID.c_str() << 
+                " device access=" << sConvertDEVICEAccess2String(sDS.eAccess).c_str() <<
+                " recommended return value == GC_ERR_NOT_INITIALIZED or == GC_ERR_INVALID_PARAMETER, received " << sConvertGCError2String(Result).c_str(), 
+                Result == GC_ERR_INVALID_HANDLE || Result == GC_ERR_INVALID_PARAMETER,
+                "DSGetParentDev DataStreamID=" << sDS.sDataStreamID.c_str() << 
+                " device access=" << sConvertDEVICEAccess2String(sDS.eAccess).c_str() <<
+                " DeviceID=" << sDS.sDeviceID.c_str() << 
+                " failed. Expected < GC_ERR_SUCCESS, received " << sConvertGCError2String(Result).c_str(), 
+                Result < GC_ERR_SUCCESS);
+
+            if (Result < GC_ERR_SUCCESS)
+            {
+                GENTLTEST_CHECK_MESSAGE("Parameter after call hDev != GENTL_INVALID_HANDLE", hDev == GENTL_INVALID_HANDLE);
+            }
+        }
+    }
+    
+    GENTLTEST_PRINT_RESULT(test_id);
+}
+
+void DataStream_DSGetParentDev::TestDSGetParentDevWithoutDSOpen( uint32_t test_id )
+{
+    GENTLTEST_DESCRIPTION(test_id, "Test DSGetParentDev with closed datastream before");
+    LibrarySystemSetup          oLibSysSetup;
+    tDataStreamList             vecDataStreamList;
+    tDataStreamList::iterator   xIter;
+    
+    vCreateTestCaseList(oLibSysSetup, vecDataStreamList);
+
+    for (xIter=vecDataStreamList.begin(); xIter!=vecDataStreamList.end(); xIter++)
+    {
+        GC_ERROR                Result = GC_ERR_SUCCESS;
+        DEV_HANDLE              hDevice = GENTL_INVALID_HANDLE;
+        IF_HANDLE               hIF = GENTL_INVALID_HANDLE;
+        stDataStream            sDS = (stDataStream)*xIter;
+        Interface_PreCondition  oIFPreCondition(oLibSysSetup.hGetTLHandle(), sDS.sInterfaceID, &hIF);
+        Device_PreCondition     oDevPreCondition(hIF, sDS.sDeviceID, sDS.eAccess, &hDevice);
+
+        if (oDevPreCondition.eGetLastResult() >= GC_ERR_SUCCESS)
+        {
+            DS_HANDLE               hDs = GENTL_INVALID_HANDLE;
+            DEV_HANDLE              hDev = GENTL_INVALID_HANDLE;
+            DataStream_PreCondition oDSPreCondition(hDevice, sDS.sDataStreamID, &hDs);
+            
+            oDSPreCondition.vClose();
+        
+            Result = m_ModDS.eDSGetParentDev(hDs, &hDev);
+            
+            GENTLTEST_CHECK_RESULT("Note: DSGetParentDev DataStreamID=" << sDS.sDataStreamID.c_str() << 
+                " DeviceID=" << sDS.sDeviceID.c_str() << 
+                " device access=" << sConvertDEVICEAccess2String(sDS.eAccess).c_str() <<
+                " recommended return value == GC_ERR_NOT_INITIALIZED or == GC_ERR_INVALID_PARAMETER, received " << sConvertGCError2String(Result).c_str(), 
+                Result == GC_ERR_INVALID_HANDLE || Result == GC_ERR_INVALID_PARAMETER,
+                "DSGetParentDev DataStreamID=" << sDS.sDataStreamID.c_str() << 
+                " device access=" << sConvertDEVICEAccess2String(sDS.eAccess).c_str() <<
+                " DeviceID=" << sDS.sDeviceID.c_str() << 
+                " failed. Expected < GC_ERR_SUCCESS, received " << sConvertGCError2String(Result).c_str(), 
+                Result < GC_ERR_SUCCESS);
+
+            if (Result < GC_ERR_SUCCESS)
+            {
+                GENTLTEST_CHECK_MESSAGE("Parameter after call hDev != GENTL_INVALID_HANDLE", hDev == GENTL_INVALID_HANDLE);
+            }
+        }
+    }
+        
+    GENTLTEST_PRINT_RESULT(test_id);
+}
+
+void DataStream_DSGetParentDev::TestDSGetParentDevWithDSNULL( uint32_t test_id )
+{
+    GENTLTEST_DESCRIPTION(test_id, "Test DSGetParentDev with datastream handle = GENTL_INVALID_HANDLE");
+    LibrarySystemSetup                  oLibSysSetup;
+    System_PreCondition::tStringVector  xInterfaceList=oLibSysSetup.xGetTLInterfaceList();
+
+    for (uint32_t index1=0; index1<xInterfaceList.size(); index1++)
+    {
+        uint32_t                uiNumDevices;
+        IF_HANDLE               hInterface = GENTL_INVALID_HANDLE;
+        Interface_PreCondition  oIFPreCondition(oLibSysSetup.hGetTLHandle(), xInterfaceList[index1], &hInterface);
+
+        uiNumDevices = oIFPreCondition.zGetIFNumberOfDevices();
+
+        for (uint32_t index2=0; index2<uiNumDevices; index2++)
+        {
+            std::string     sDeviceID = oIFPreCondition.sGetDeviceID(hInterface, index2);
+
+            for (DEVICE_ACCESS_FLAGS_LIST eAccess=DEVICE_ACCESS_READONLY; eAccess<=DEVICE_ACCESS_EXCLUSIVE; eAccess=(DEVICE_ACCESS_FLAGS_LIST)(eAccess+1))
+            {
+                DEV_HANDLE          hDevice=GENTL_INVALID_HANDLE;
+                Device_PreCondition oDevPreCondition(hInterface, sDeviceID, eAccess, &hDevice);           
+                
+                if (oDevPreCondition.eGetLastResult() >= GC_ERR_SUCCESS)
+                {
+                    uint32_t        uiNumDataStreams = oDevPreCondition.uiGetNumDataStreams();
+                    
+                    for (uint32_t index3=0; index3<uiNumDataStreams; index3++)
+                    {
+                        DS_HANDLE               hDs = GENTL_INVALID_HANDLE;
+                        std::string             sDataStreamID = oDevPreCondition.sGetDataStreamID(hDevice, index3);
+                        DataStream_PreCondition oDSPreCondition(hDevice, sDataStreamID, &hDs);
+                        DEV_HANDLE              hDev = GENTL_INVALID_HANDLE;
+                        GC_ERROR                Result = GC_ERR_SUCCESS;
+                                
+                        Result = m_ModDS.eDSGetParentDev(GENTL_INVALID_HANDLE, &hDev);
+                                
+                        GENTLTEST_CHECK_RESULT("Note: DSGetParentDev DataStreamID=" << sDataStreamID.c_str() << 
+                            " DeviceID=" << sDeviceID.c_str() << 
+                            " device access=" << sConvertDEVICEAccess2String(eAccess).c_str() <<
+                            " recommended return value == GC_ERR_NOT_INITIALIZED or == GC_ERR_INVALID_PARAMETER, received " << sConvertGCError2String(Result).c_str(), 
+                            Result == GC_ERR_INVALID_HANDLE || Result == GC_ERR_INVALID_PARAMETER,
+                            "DSGetParentDev DataStreamID=" << sDataStreamID.c_str() << 
+                            " device access=" << sConvertDEVICEAccess2String(eAccess).c_str() <<
+                            " DeviceID=" << sDeviceID.c_str() << 
+                            " failed. Expected < GC_ERR_SUCCESS, received " << sConvertGCError2String(Result).c_str(), 
+                            Result < GC_ERR_SUCCESS);
+
+                        if (Result < GC_ERR_SUCCESS)
+                        {
+                            GENTLTEST_CHECK_MESSAGE("Parameter after call hDev != GENTL_INVALID_HANDLE", hDev == GENTL_INVALID_HANDLE);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    GENTLTEST_PRINT_RESULT(test_id);
+}
+
+void DataStream_DSGetParentDev::TestDSGetParentDevWithDevNULL( uint32_t test_id )
+{
+    GENTLTEST_DESCRIPTION(test_id, "Test DSGetParentDev with pointer hDev = NULL");
+    LibrarySystemSetup                  oLibSysSetup;
+    System_PreCondition::tStringVector  xInterfaceList=oLibSysSetup.xGetTLInterfaceList();
+
+    for (uint32_t index1=0; index1<xInterfaceList.size(); index1++)
+    {
+        uint32_t                uiNumDevices;
+        IF_HANDLE               hInterface = GENTL_INVALID_HANDLE;
+        Interface_PreCondition  oIFPreCondition(oLibSysSetup.hGetTLHandle(), xInterfaceList[index1], &hInterface);
+
+        uiNumDevices = oIFPreCondition.zGetIFNumberOfDevices();
+
+        for (uint32_t index2=0; index2<uiNumDevices; index2++)
+        {
+            std::string     sDeviceID = oIFPreCondition.sGetDeviceID(hInterface, index2);
+
+            for (DEVICE_ACCESS_FLAGS_LIST eAccess=DEVICE_ACCESS_READONLY; eAccess<=DEVICE_ACCESS_EXCLUSIVE; eAccess=(DEVICE_ACCESS_FLAGS_LIST)(eAccess+1))
+            {
+                DEV_HANDLE          hDevice=GENTL_INVALID_HANDLE;
+                Device_PreCondition oDevPreCondition(hInterface, sDeviceID, eAccess, &hDevice);           
+                
+                if (oDevPreCondition.eGetLastResult() >= GC_ERR_SUCCESS)
+                {
+                    uint32_t        uiNumDataStreams = oDevPreCondition.uiGetNumDataStreams();
+                    
+                    for (uint32_t index3=0; index3<uiNumDataStreams; index3++)
+                    {
+                        DS_HANDLE               hDs = GENTL_INVALID_HANDLE;
+                        std::string             sDataStreamID = oDevPreCondition.sGetDataStreamID(hDevice, index3);
+                        DataStream_PreCondition oDSPreCondition(hDevice, sDataStreamID, &hDs);
+                        GC_ERROR                Result = GC_ERR_SUCCESS;
+                                
+                        Result = m_ModDS.eDSGetParentDev(hDs, NULL);
+                                
+                        GENTLTEST_CHECK_RESULT("Note: DSGetParentDev DataStreamID=" << sDataStreamID.c_str() << 
+                            " DeviceID=" << sDeviceID.c_str() << 
+                            " device access=" << sConvertDEVICEAccess2String(eAccess).c_str() <<
+                            " recommended return value == GC_ERR_NOT_INITIALIZED or == GC_ERR_INVALID_PARAMETER, received " << sConvertGCError2String(Result).c_str(), 
+                            Result == GC_ERR_INVALID_HANDLE || Result == GC_ERR_INVALID_PARAMETER,
+                            "DSGetParentDev DataStreamID=" << sDataStreamID.c_str() << 
+                            " device access=" << sConvertDEVICEAccess2String(eAccess).c_str() <<
+                            " DeviceID=" << sDeviceID.c_str() << 
+                            " failed. Expected < GC_ERR_SUCCESS, received " << sConvertGCError2String(Result).c_str(), 
+                            Result < GC_ERR_SUCCESS);
+                    }
+                }
+            }
+        }
+    }
+    
+    GENTLTEST_PRINT_RESULT(test_id);
+}
+
+/////////////////////////////////////////////////////////////////////
+// helper
+/////////////////////////////////////////////////////////////////////
+
+void DataStream_DSGetParentDev::vCreateTestCaseList(LibrarySystemSetup &oLibSysSetup, tDataStreamList &vecDataStreamList)
+{
+    System_PreCondition::tStringVector  xInterfaceList = oLibSysSetup.xGetTLInterfaceList();
+
+    for (uint32_t index1=0; index1<xInterfaceList.size(); index1++)
+    {
+        uint32_t                uiNumDevices;
+        IF_HANDLE               hIF = GENTL_INVALID_HANDLE;
+        Interface_PreCondition  oIFPreCondition(oLibSysSetup.hGetTLHandle(), xInterfaceList[index1], &hIF);
+
+        uiNumDevices = oIFPreCondition.zGetIFNumberOfDevices();
+        
+        for (uint32_t index2=0; index2<uiNumDevices; index2++)
+        {
+            std::string     sDeviceID = oIFPreCondition.sGetDeviceID(hIF, index2);
+
+            for (DEVICE_ACCESS_FLAGS_LIST eAccess=DEVICE_ACCESS_CONTROL; eAccess<=DEVICE_ACCESS_EXCLUSIVE; eAccess=(DEVICE_ACCESS_FLAGS_LIST)(eAccess+1))
+            {
+                DEV_HANDLE          hDev = GENTL_INVALID_HANDLE;
+                Device_PreCondition oDevPreCondition(hIF, sDeviceID, eAccess, &hDev);
+
+                if (oDevPreCondition.eGetLastResult() >= GC_ERR_SUCCESS)
+                {
+                    uint32_t    uiNumDataStreams=oDevPreCondition.uiGetNumDataStreams();
+                    
+                    for (uint32_t index3=0; index3<uiNumDataStreams; index3++)
+                    {
+                        DS_HANDLE                   hDs = GENTL_INVALID_HANDLE;
+                        size_t                      iSize = 0;
+                        std::string                 sDataStreamID = oDevPreCondition.sGetDataStreamID(hDev, index3);
+                        DataStream_PreCondition     oDSPreCondition(hDev, sDataStreamID, &hDs);
+                        stDataStream                sDS;
+                
+                        sDS.sInterfaceID = xInterfaceList[index1];
+                        sDS.sDeviceID = sDeviceID;
+                        sDS.eAccess = eAccess;
+                        sDS.sDataStreamID = sDataStreamID;
+                        vecDataStreamList.push_back(sDS);
+                    }       
+                }
+            }
+        }
+    }
+
+    //GENTLTEST_PRINT("DataStream_DSFlushQueue::vCreateTestCaseList " << vecDataStreamList.size() << " testcases created" << std::endl);
+}

@@ -1,0 +1,1759 @@
+======================================================================
+GenICam Transport Layer Validation Framework Report
+----------------------------------------------------------------------
+Date                         : 13:33:49 04/10/24
+Validation Framework Version : 0.0.0.31
+Check for GenICam TL Version = 1.4
+Running 505 test cases...
+
+**********************************************************************
+==> Running vTestFnExportTestWrapper:
+1. Test if GenTL functions version 1.4 exported.
+2. System information of current Transport Layer
+
+**********************************************************************
+==> Running LibraryTest:
+3. Test standard GCInitLib
+4. Test standard GCInitLib, GCCloseLib
+5. Test double GCInitLib (see section 3.1 and 3.2 and 6.1.5)
+6. Test double GCCloseLib (see section 3.1 and 3.2 and 6.1.5)
+7. Test GCCloseLib without GCInitLib before (see section 3.1 and 3.2 and 6.1.5)
+8. Test standard GCGetLastError with double GCInitLib before as error (error value GC_ERR_RESOURCE_IN_USE)
+9. Test GCGetLastError without GCInitLib before (see section 3.1 and 6.3.1)
+10. Test GCGetLastError in case of last return value GC_ERR_SUCCESS => expect GC_ERR_SUCCESS.
+11. Test GCGetLastError with parameter piErrorCode=NULL (see section 6.1.5)
+12. Test GCGetLastError with parameter piSize=NULL (see section 6.1.5)
+13. Test GCGetLastError with parameter piErrorCode=NULL at second call with initialized buffer (see section 6.1.5)
+14. Test GCGetLastError with parameter piSize=NULL at second call with initialized buffer (see section 6.1.5)
+15. Test GCGetLastError with parameter piSize=piSize-1 at second call with initialized buffer (see section 6.1.5)
+
+**********************************************************************
+==> Running Library_GCGetInfo:
+16. Test standard GCGetInfo
+17. Test GCGetInfo without GCInitLib before
+18. Test GCGetInfo with parameter piSize=NULL at call with initialized buffer
+19. Test GCGetInfo with parameter piSize=NULL at call for size check
+20. Test GCGetInfo with parameter iSize=iSize-1 at call with initialized buffer
+21. Test GCGetInfo with piType = NULL at second call with initialized buffer
+22. Test GCGetInfo with parameter iInfoCmd=TL_INFO_GENTL_VER_MINOR+1 (Test case edited for GenTL 1.5, more inforamtion in source code commented section)
+
+**********************************************************************
+==> Running SystemTest:
+23. Test standard TLOpen TLClose
+24. Test TLOpen with closed library
+25. Test double TLOpen (see section 3.2 and 6.1.5)
+26. Test TLOpen with handle pointer NULL
+27. Test TLClose with closed library
+28. Test TLClose without TLOpen before
+29. Test double TLClose with TLOpen before
+
+**********************************************************************
+==> Running System_TLUpdateInterface:
+30. Test standard TLUpdateInterfaceList (using 1000msec timeout)
+31. Test TLUpdateInterfaceList with closed library before
+32. Test TLUpdateInterfaceList with closed system before
+33. Test TLUpdateInterfaceList with TL Handle = GENTL_INVALID_HANDLE
+34. Test TLUpdateInterfaceList with pbChanged = NULL
+
+**********************************************************************
+==> Running System_TLGetInfo:
+35. Test standard TLGetInfo
+36. Test TLGetInfo with closed library before
+37. Test TLGetInfo with closed system before
+38. Test TLGetInfo with TL handle = GENTL_INVALID_HANDLE
+39. Test TLGetInfo with TL info command = TL_INFO_GENTL_VER_MINOR+1  (Test case edited for GenTL 1.5, more inforamtion in source code commented section)
+40. Test TLGetInfo with piType = NULL at second call with initialized buffer
+41. Test TLGetInfo with piSize = NULL
+42. Test TLGetInfo with initialized buffer and iSize = iSize-1
+43. Test TLGetInfo with initialized buffer and piSize = NULL
+
+**********************************************************************
+==> Running System_TLGetNumInterfaces:
+44. Test standard TLGetNumInterfaces
+45. Test TLGetNumInterfaces with closed library before
+46. Test TLGetNumInterfaces with closed system before
+47. Test TLGetNumInterfaces with TL Handle GENTL_INVALID_HANDLE
+48. Test TLGetNumInterfaces with parameter piNumIfaces NULL
+49. Test TLGetNumInterfaces check for number of interfaces > 0
+
+**********************************************************************
+==> Running System_TLGetInterfaceID:
+50. Test standard TLGetInterfaceID
+51. Test TLGetInterfaceID with closed library before
+52. Test TLGetInterfaceID with closed system before
+53. Test TLGetInterfaceID with TL handle = GENTL_INVALID_HANDLE
+54. Test TLGetInterfaceID with piSize NULL
+55. Test TLGetInterfaceID with initialized buffer and piSize NULL
+56. Test TLGetInterfaceID with index > number interfaces
+57. Test TLGetInterfaceID persistence after TLUpdateInterfaceList
+
+**********************************************************************
+==> Running System_TLOpenInterface:
+58. Test standard TLOpenInterface
+59. Test TLOpenInterface with known interface ID (see section 3.2)
+60. Test TLOpenInterface with closed library before
+61. Test TLOpenInterface with closed system before
+62. Test TLOpenInterface with pointer IF Handle NULL
+63. Test TLOpenInterface with pointer interface ID NULL
+64. Test TLOpenInterface with a phantasy interface ID
+65. Test double TLOpenInterface
+
+**********************************************************************
+==> Running System_TLGetInterfaceInfo:
+66. Test standard TLGetInterfaceInfo
+67. Test TLGetInterfaceInfo with closed library before
+68. Test TLGetInterfaceInfo with closed system before
+69. Test TLGetInterfaceInfo with piSize = NULL
+70. Test TLGetInterfaceInfo with piType = NULL at second call with initialized buffer
+71. Test TLGetInterfaceInfo with pointer interface ID = NULL
+72. Test TLGetInterfaceInfo with initialized buffer and size = 0
+73. Test TLGetInterfaceInfo with initialized buffer and piSize = NULL
+
+**********************************************************************
+==> Running InterfaceTest:
+74. Test standard IFClose
+75. Test IFClose if library closed before
+76. Test IFClose if system closed before
+77. Test double IFClose
+78. Test reopen IFClose
+79. Test IFClose with interface handle = GENTL_INVALID_HANDLE
+80. Test IFClose with phantasy interface handle (0xb7f7b7f7)
+
+**********************************************************************
+==> Running Interface_IFGetInfo:
+81. Test standard IFGetInfo
+82. Test IFGetInfo with closed library before
+83. Test IFGetInfo with closed system before
+84. Test IFGetInfo with interface handel GENTL_INVALID_HANDLE
+85. Test IFGetInfo with invalid command=INTERFACE_INFO_TLTYPE+1
+86. Test IFGetInfo with closed interface before
+87. Test IFGetInfo with parameter piSize = NULL
+88. Test IFGetInfo with piType = NULL at second call with initialized buffer
+
+**********************************************************************
+==> Running Interface_IFUpdateDeviceList:
+89. Test standard IFUpdateDeviceList (using 1000msec timeout)
+90. Test IFUpdateDeviceList with closed library before
+91. Test IFUpdateDeviceList with closed system before
+92. Test IFUpdateDeviceList with closed interface before
+93. Test IFUpdateDeviceList with interface handle = GENTL_INVALID_HANDLE
+94. Test IFUpdateDeviceList with parameter pbChanged = NULL
+
+**********************************************************************
+==> Running Interface_IFGetNumDevices:
+95. Test standard IFGetNumDevices
+96. Test IFGetNumDevices with closed library before
+97. Test IFGetNumDevices with closed system before
+98. Test IFGetNumDevices with closed interface before
+99. Test IFGetNumDevices with interface handle GENTL_INVALID_HANDLE
+100. Test IFGetNumDevices with parameter piNumDevices = NULL
+101. Test IFGetNumDevices without update device list before
+
+**********************************************************************
+==> Running Interface_IFGetDeviceID:
+102. Test standard IFGetDeviceID
+103. Test IFGetDeviceID with closed library before
+104. Test IFGetDeviceID with closed system before
+105. Test IFGetDeviceID with closed interface before
+106. Test IFGetDeviceID with parameter interface handle GENTL_INVALID_HANDLE
+107. Test IFGetDeviceID with parameter piSize = NULL in size check call
+108. Test IFGetDeviceID with parameter piSize = NULL in call with initialized buffer
+109. Test IFGetDeviceID with parameter index > number of devices
+110. Test IFGetDeviceID with parameter iSize = iSize-1 in call with initialized buffer
+111. Test IFGetDeviceID persistence after IFUpdateDeviceList
+
+**********************************************************************
+==> Running Interface_IFOpenDevice:
+112. Test standard IFOpenDevice
+113. Test IFOpenDevice with known device ID (see section 3.3)
+114. Test IFOpenDevice with closed library before
+115. Test IFOpenDevice with closed system before
+116. Test IFOpenDevice with closed interface before
+117. Test IFOpenDevice with interface handle = GENTL_INVALID_HANDLE
+118. Test IFOpenDevice with pointer sDeviceID = NULL
+119. Test IFOpenDevice with phantasy sDeviceID
+120. Test double IFOpenDevice (see section 3.4)
+121. Test multiple IFOpenDevice (mode DEVICE_ACCESS_CONTROL and mode DEVICE_ACCESS_READONLY)
+122. Test multiple IFOpenDevice (mode DEVICE_ACCESS_EXCLUSIVE and mode DEVICE_ACCESS_READONLY and mode DEVICE_ACCESS_CONTROL)
+123. Test IFOpenDevice with pointer device handle = NULL
+124. Test IFOpenDevice with invalid access mode = DEVICE_ACCESS_EXCLUSIVE+1
+
+**********************************************************************
+==> Running Interface_IFGetDeviceInfo:
+125. Test standard IFGetDeviceInfo
+126. Test IFGetDeviceInfo with closed library before
+127. Test IFGetDeviceInfo with closed system before
+128. Test IFGetDeviceInfo with closed interface before
+129. Test IFGetDeviceInfo with parameter piSize = NULL
+130. Test IFGetDeviceInfo with parameter piType = NULL at second call with initialized buffer
+131. Test IFGetDeviceInfo with interface handle GENTL_INVALID_HANDLE
+132. Test IFGetDeviceInfo with pointer sDeviceID = NULL
+133. Test IFGetDeviceInfo with phantasy sDeviceID
+134. Test IFGetDeviceInfo with parameter iSize = 0 at second call with initialized buffer
+135. Test IFGetDeviceInfo with parameter piSize = NULL at second call with initialized buffer
+
+**********************************************************************
+==> Running Interface_IFGetParentTL:
+136. Test standard IFGetParentTL
+137. Test IFGetParentTL with closed library before
+138. Test IFGetParentTL with closed system before
+139. Test IFGetParentTL with closed interface before
+140. Test IFGetParentTL with interface handle = GENTL_INVALID_HANDLE
+141. Test IFGetParentTL with pointer hSystem = NULL
+
+**********************************************************************
+==> Running DeviceTest:
+142. Test standard DevClose
+143. Test DevClose with closed library before
+144. Test DevClose with closed system before
+145. Test DevClose with closed interface before
+146. Test double DevClose
+147. Test DevClose and reopen
+148. Test DevClose with parameter device handle GENTL_INVALID_HANDLE
+149. Test DevClose with parameter random device handle (0xb7f7b7f7)
+
+**********************************************************************
+==> Running Device_DevGetInfo:
+150. Test standard DevGetInfo
+151. Test DevGetInfo with closed library before
+152. Test DevGetInfo with closed system before
+153. Test DevGetInfo with closed interface before
+154. Test DevGetInfo with closed device before
+155. Test DevGetInfo with parameter piSize = NULL
+156. Test DevGetInfo with parameter piType = NULL at second call with initialized buffer
+157. Test DevGetInfo with parameter device handle = GENTL_INVALID_HANDLE
+158. Test DevGetInfo with parameter iSize = 0 at second call with initialized buffer
+159. Test DevGetInfo with parameter piSize = NULL at second call with initialized buffer
+160. Test DevGetInfo with parameter iSize = iSize-1 at second call with initialized buffer
+
+**********************************************************************
+==> Running Device_DevGetNumDataStreams:
+161. Test standard DevGetNumDataStreams
+162. Test DevGetNumDataStreams with closed library before
+163. Test DevGetNumDataStreams with closed system before
+164. Test DevGetNumDataStreams with closed interface before
+165. Test DevGetNumDataStreams with closed device before
+166. Test DevGetNumDataStreams with parameter piNumDataStreams = NULL
+167. Test DevGetNumDataStreams with device handle = GENTL_INVALID_HANDLE
+
+**********************************************************************
+==> Running Device_DevGetDataStreamID:
+168. Test standard DevGetDataStreamID
+169. Test DevGetDataStreamID with closed library before
+170. Test DevGetDataStreamID with closed system before
+171. Test DevGetDataStreamID with closed interface before
+172. Test DevGetDataStreamID with closed device before
+173. Test DevGetDataStreamID with parameter piSize = NULL
+174. Test DevGetDataStreamID with parameter device handle = GENTL_INVALID_HANDLE
+175. Test DevGetDataStreamID with parameter index > uiNumDataStreams
+176. Test DevGetDataStreamID with parameter iSize = 0 at second call with initialized buffer
+177. Test DevGetDataStreamID with parameter piSize = NULL at second call with initialized buffer
+178. Test DevGetDataStreamID persistence between two sessions.
+
+**********************************************************************
+==> Running Device_DevGetPort:
+179. Test standard DevGetPort
+180. Test DevGetPort with closed library before
+181. Test DevGetPort with closed system before
+182. Test DevGetPort with closed interface before
+183. Test DevGetPort with closed device before
+184. Test DevGetPort with parameter device handle = GENTL_INVALID_HANDLE
+185. Test DevGetPort with parameter pointer port handle = NULL
+
+**********************************************************************
+==> Running Device_DevOpenDataStream:
+186. Test standard DevOpenDataStream
+187. Test DevOpenDataStream with closed library before
+188. Test DevOpenDataStream with closed system before
+189. Test DevOpenDataStream with closed interface before
+190. Test DevOpenDataStream with closed device before
+191. Test DevOpenDataStream with parameter device handle = GENTL_INVALID_HANDLE
+192. Test DevOpenDataStream with parameter pointer data stream handle = NULL
+193. Test DevOpenDataStream with parameter pointer sDataStreamID = NULL
+194. Test double DevOpenDataStream (see section 3.5)
+
+**********************************************************************
+==> Running Device_DevGetParentIF:
+195. Test standard DevGetParentIF
+196. Test DevGetParentIF with closed library before
+197. Test DevGetParentIF with closed system before
+198. Test DevGetParentIF with closed interface before
+199. Test DevGetParentIF with closed device before
+200. Test DevGetParentIF with device handle = GENTL_INVALID_HANDLE
+201. Test DevGetParentIF with pointer hIf = NULL
+
+**********************************************************************
+==> Running Port_GCGetPortInfo:
+202. Test standard GCGetPortInfo (using system)
+203. Test standard GCGetPortInfo (using interface)
+204. Test standard GCGetPortInfo (using device)
+205. Test standard GCGetPortInfo (using remote device)
+206. Test standard GCGetPortInfo (using datastream)
+207. Test standard GCGetPortInfo (using buffer)
+208. Test GCGetPortInfo with closed library before
+209. Test GCGetPortInfo with closed system before
+210. Test GCGetPortInfo with closed interface before
+211. Test GCGetPortInfo with closed device before
+212. Test GCGetPortInfo with parameter port handle = GENTL_INVALID_HANDLE
+213. Test GCGetPortInfo with parameter iInfoCmd = PORT_INFO_PORTNAME+1
+214. Test GCGetPortInfo with parameter piType = NULL at second call with initialized buffer
+215. Test GCGetPortInfo with parameter piSize = NULL
+216. Test GCGetPortInfo with parameter iSize = iSize - 1 at second call with initialized buffer
+217. Test GCGetPortInfo with parameter piSize = NULL at second call with initialized buffer
+
+**********************************************************************
+==> Running Port_GCGetPortURL:
+218. Test standard GCGetPortURL
+219. Test GCGetPortURL with closed library before
+220. Test GCGetPortURL with closed system before
+221. Test GCGetPortURL with closed interface before
+222. Test GCGetPortURL with closed device before
+223. Test GCGetPortURL with parameter port handle = GENTL_INVALID_HANDLE
+224. Test GCGetPortURL with parameter piSize = NULL
+225. Test GCGetPortURL with parameter iSize = iSize - 1 at second call with initialized buffer
+
+**********************************************************************
+==> Running Port_GCGetNumPortURLs:
+226. Test standard GCGetNumPortURLs
+227. Test GCGetNumPortURLs with closed library before
+228. Test GCGetNumPortURLs with closed system before
+229. Test GCGetNumPortURLs with closed interface before
+230. Test GCGetNumPortURLs with closed device before
+231. Test GCGetNumPortURLs with port handle = GENTL_INVALID_HANDLE
+232. Test GCGetNumPortURLs with parameter piNumURLs = NULL
+
+**********************************************************************
+==> Running Port_GCGetPortURLInfo:
+233. Test standard GCGetPortURLInfo
+234. Test GCGetPortURLInfo with closed library before
+235. Test GCGetPortURLInfo with closed system before
+236. Test GCGetPortURLInfo with closed interface before
+237. Test GCGetPortURLInfo with closed device before
+238. Test GCGetPortURLInfo with port handle = GENTL_INVALID_HANDLE
+239. Test GCGetPortURLInfo with parameter piSize = NULL
+240. Test GCGetPortURLInfo with parameter piType = NULL at second call with initialized buffer
+241. Test GCGetPortURLInfo with parameter iSize = 0 at second call with initialized buffer
+242. Test GCGetPortURLInfo with parameter piSize = NULL at second call with initialized buffer
+243. Test GCGetPortURLInfo with parameter iSize = iSize - 1 at second call with initialized buffer
+244. Test GCGetPortURLInfo with parameter iInfoCmd = URL_INFO_FILE_SHA1_HASH + 1
+245. Test GCGetPortURLInfo with parameter iURLIndex = iNumURLs + 1
+
+**********************************************************************
+==> Running Port_GCReadPort:
+246. Test standard GCReadPort system xml
+247. Test standard GCReadPort all standard entries in 'TLPort' of system xml
+248. Test standard GCReadPort all mandatory entries in 'TLPort' of system xml
+249. Test standard GCReadPort interface xml
+250. Test GCReadPort all standard entries in 'InterfacePort' of interface xml
+251. Test GCReadPort all mandatory entries in 'InterfacePort' of interface xml (see section 7.1.2 preconditions)
+252. Test standard GCReadPort device xml
+253. Test standard GCReadPort all standard entries in 'DevicePort' of device xml
+254. Test standard GCReadPort all mandatory entries in 'DevicePort' of device xml
+255. Test standard GCReadPort remote device xml
+256. Test standard GCReadPort all mandatory entries in 'Device' of remote device xml
+257. Test standard GCReadPort datastream xml
+258. Test standard GCReadPort all standard entries in 'StreamPort' of datastream xml
+259. Test standard GCReadPort all mandatory entries in 'StreamPort' of datastream xml
+260. Test standard GCReadPort all mandatory entries in 'BufferPort' if buffer supports it (see section 4.1 and 4.1.1)
+261. Test GCReadPort device xml with closed library before
+262. Test GCReadPort device xml with closed system before
+263. Test GCReadPort device xml with closed interface before
+264. Test GCReadPort device xml with closed device before
+265. Test GCReadPort device xml with parameter piSize = NULL
+266. Test GCReadPort device xml with parameter iSize = iSize / 2
+267. Test GCReadPort device xml with parameter pBuffer = NULL
+
+**********************************************************************
+==> Running Port_GCWritePort:
+268. Test standard GCWritePort node 'Height' in romte device xml
+269. Test GCWritePort device xml with closed library before
+270. Test GCWritePort device xml with closed system before
+
+**********************************************************************
+==> Running Port_GCReadPortStacked:
+271. Test standard GCReadPortStacked all standard entries in 'TLPort' of system xml
+272. Test GCReadPortStacked all standard entries in 'InterfacePort' of interface xml
+273. Test standard GCReadPortStacked all standard entries in 'DevicePort' of device xml
+274. Test GCReadPortStacked device xml with closed library before
+275. Test GCReadPortStacked device xml with closed system before
+276. Test GCReadPortStacked device xml with closed interface before
+277. Test GCReadPortStacked device xml with closed device before
+278. Test GCReadPortStacked device xml with parameter piNumEntries = NULL
+279. Test GCReadPortStacked device xml with parameter pEntries = NULL
+
+**********************************************************************
+==> Running Port_GCWritePortStacked:
+280. Test standard GCWritePortStacked with 'Height' and 'Width' of remote device xml
+281. Test GCWritePortStacked device xml with closed library before
+======================================================================
+GenICam Transport Layer Validation Framework Report
+----------------------------------------------------------------------
+Date                         : 13:34:19 04/10/24
+Validation Framework Version : 0.0.0.31
+Check for GenICam TL Version = 1.4
+Running 505 test cases...
+
+**********************************************************************
+==> Running vTestFnExportTestWrapper:
+1. Test if GenTL functions version 1.4 exported.
+2. System information of current Transport Layer
+
+**********************************************************************
+==> Running LibraryTest:
+3. Test standard GCInitLib
+4. Test standard GCInitLib, GCCloseLib
+5. Test double GCInitLib (see section 3.1 and 3.2 and 6.1.5)
+6. Test double GCCloseLib (see section 3.1 and 3.2 and 6.1.5)
+7. Test GCCloseLib without GCInitLib before (see section 3.1 and 3.2 and 6.1.5)
+8. Test standard GCGetLastError with double GCInitLib before as error (error value GC_ERR_RESOURCE_IN_USE)
+9. Test GCGetLastError without GCInitLib before (see section 3.1 and 6.3.1)
+10. Test GCGetLastError in case of last return value GC_ERR_SUCCESS => expect GC_ERR_SUCCESS.
+11. Test GCGetLastError with parameter piErrorCode=NULL (see section 6.1.5)
+12. Test GCGetLastError with parameter piSize=NULL (see section 6.1.5)
+13. Test GCGetLastError with parameter piErrorCode=NULL at second call with initialized buffer (see section 6.1.5)
+14. Test GCGetLastError with parameter piSize=NULL at second call with initialized buffer (see section 6.1.5)
+15. Test GCGetLastError with parameter piSize=piSize-1 at second call with initialized buffer (see section 6.1.5)
+
+**********************************************************************
+==> Running Library_GCGetInfo:
+16. Test standard GCGetInfo
+17. Test GCGetInfo without GCInitLib before
+18. Test GCGetInfo with parameter piSize=NULL at call with initialized buffer
+19. Test GCGetInfo with parameter piSize=NULL at call for size check
+20. Test GCGetInfo with parameter iSize=iSize-1 at call with initialized buffer
+21. Test GCGetInfo with piType = NULL at second call with initialized buffer
+22. Test GCGetInfo with parameter iInfoCmd=TL_INFO_GENTL_VER_MINOR+1 (Test case edited for GenTL 1.5, more inforamtion in source code commented section)
+
+**********************************************************************
+==> Running SystemTest:
+23. Test standard TLOpen TLClose
+24. Test TLOpen with closed library
+25. Test double TLOpen (see section 3.2 and 6.1.5)
+26. Test TLOpen with handle pointer NULL
+27. Test TLClose with closed library
+28. Test TLClose without TLOpen before
+29. Test double TLClose with TLOpen before
+
+**********************************************************************
+==> Running System_TLUpdateInterface:
+30. Test standard TLUpdateInterfaceList (using 1000msec timeout)
+31. Test TLUpdateInterfaceList with closed library before
+32. Test TLUpdateInterfaceList with closed system before
+33. Test TLUpdateInterfaceList with TL Handle = GENTL_INVALID_HANDLE
+34. Test TLUpdateInterfaceList with pbChanged = NULL
+
+**********************************************************************
+==> Running System_TLGetInfo:
+35. Test standard TLGetInfo
+36. Test TLGetInfo with closed library before
+37. Test TLGetInfo with closed system before
+38. Test TLGetInfo with TL handle = GENTL_INVALID_HANDLE
+39. Test TLGetInfo with TL info command = TL_INFO_GENTL_VER_MINOR+1  (Test case edited for GenTL 1.5, more inforamtion in source code commented section)
+40. Test TLGetInfo with piType = NULL at second call with initialized buffer
+41. Test TLGetInfo with piSize = NULL
+42. Test TLGetInfo with initialized buffer and iSize = iSize-1
+43. Test TLGetInfo with initialized buffer and piSize = NULL
+
+**********************************************************************
+==> Running System_TLGetNumInterfaces:
+44. Test standard TLGetNumInterfaces
+45. Test TLGetNumInterfaces with closed library before
+46. Test TLGetNumInterfaces with closed system before
+47. Test TLGetNumInterfaces with TL Handle GENTL_INVALID_HANDLE
+48. Test TLGetNumInterfaces with parameter piNumIfaces NULL
+49. Test TLGetNumInterfaces check for number of interfaces > 0
+
+**********************************************************************
+==> Running System_TLGetInterfaceID:
+50. Test standard TLGetInterfaceID
+51. Test TLGetInterfaceID with closed library before
+52. Test TLGetInterfaceID with closed system before
+53. Test TLGetInterfaceID with TL handle = GENTL_INVALID_HANDLE
+54. Test TLGetInterfaceID with piSize NULL
+55. Test TLGetInterfaceID with initialized buffer and piSize NULL
+56. Test TLGetInterfaceID with index > number interfaces
+57. Test TLGetInterfaceID persistence after TLUpdateInterfaceList
+
+**********************************************************************
+==> Running System_TLOpenInterface:
+58. Test standard TLOpenInterface
+59. Test TLOpenInterface with known interface ID (see section 3.2)
+60. Test TLOpenInterface with closed library before
+61. Test TLOpenInterface with closed system before
+62. Test TLOpenInterface with pointer IF Handle NULL
+63. Test TLOpenInterface with pointer interface ID NULL
+64. Test TLOpenInterface with a phantasy interface ID
+65. Test double TLOpenInterface
+
+**********************************************************************
+==> Running System_TLGetInterfaceInfo:
+66. Test standard TLGetInterfaceInfo
+67. Test TLGetInterfaceInfo with closed library before
+68. Test TLGetInterfaceInfo with closed system before
+69. Test TLGetInterfaceInfo with piSize = NULL
+70. Test TLGetInterfaceInfo with piType = NULL at second call with initialized buffer
+71. Test TLGetInterfaceInfo with pointer interface ID = NULL
+72. Test TLGetInterfaceInfo with initialized buffer and size = 0
+73. Test TLGetInterfaceInfo with initialized buffer and piSize = NULL
+
+**********************************************************************
+==> Running InterfaceTest:
+74. Test standard IFClose
+75. Test IFClose if library closed before
+76. Test IFClose if system closed before
+77. Test double IFClose
+78. Test reopen IFClose
+79. Test IFClose with interface handle = GENTL_INVALID_HANDLE
+80. Test IFClose with phantasy interface handle (0xb7f7b7f7)
+
+**********************************************************************
+==> Running Interface_IFGetInfo:
+81. Test standard IFGetInfo
+82. Test IFGetInfo with closed library before
+83. Test IFGetInfo with closed system before
+84. Test IFGetInfo with interface handel GENTL_INVALID_HANDLE
+85. Test IFGetInfo with invalid command=INTERFACE_INFO_TLTYPE+1
+86. Test IFGetInfo with closed interface before
+87. Test IFGetInfo with parameter piSize = NULL
+88. Test IFGetInfo with piType = NULL at second call with initialized buffer
+
+**********************************************************************
+==> Running Interface_IFUpdateDeviceList:
+89. Test standard IFUpdateDeviceList (using 1000msec timeout)
+90. Test IFUpdateDeviceList with closed library before
+91. Test IFUpdateDeviceList with closed system before
+92. Test IFUpdateDeviceList with closed interface before
+93. Test IFUpdateDeviceList with interface handle = GENTL_INVALID_HANDLE
+94. Test IFUpdateDeviceList with parameter pbChanged = NULL
+
+**********************************************************************
+==> Running Interface_IFGetNumDevices:
+95. Test standard IFGetNumDevices
+96. Test IFGetNumDevices with closed library before
+97. Test IFGetNumDevices with closed system before
+98. Test IFGetNumDevices with closed interface before
+99. Test IFGetNumDevices with interface handle GENTL_INVALID_HANDLE
+100. Test IFGetNumDevices with parameter piNumDevices = NULL
+101. Test IFGetNumDevices without update device list before
+
+**********************************************************************
+==> Running Interface_IFGetDeviceID:
+102. Test standard IFGetDeviceID
+103. Test IFGetDeviceID with closed library before
+104. Test IFGetDeviceID with closed system before
+105. Test IFGetDeviceID with closed interface before
+106. Test IFGetDeviceID with parameter interface handle GENTL_INVALID_HANDLE
+107. Test IFGetDeviceID with parameter piSize = NULL in size check call
+108. Test IFGetDeviceID with parameter piSize = NULL in call with initialized buffer
+109. Test IFGetDeviceID with parameter index > number of devices
+110. Test IFGetDeviceID with parameter iSize = iSize-1 in call with initialized buffer
+111. Test IFGetDeviceID persistence after IFUpdateDeviceList
+
+**********************************************************************
+==> Running Interface_IFOpenDevice:
+112. Test standard IFOpenDevice
+113. Test IFOpenDevice with known device ID (see section 3.3)
+114. Test IFOpenDevice with closed library before
+115. Test IFOpenDevice with closed system before
+116. Test IFOpenDevice with closed interface before
+117. Test IFOpenDevice with interface handle = GENTL_INVALID_HANDLE
+118. Test IFOpenDevice with pointer sDeviceID = NULL
+119. Test IFOpenDevice with phantasy sDeviceID
+120. Test double IFOpenDevice (see section 3.4)
+121. Test multiple IFOpenDevice (mode DEVICE_ACCESS_CONTROL and mode DEVICE_ACCESS_READONLY)
+122. Test multiple IFOpenDevice (mode DEVICE_ACCESS_EXCLUSIVE and mode DEVICE_ACCESS_READONLY and mode DEVICE_ACCESS_CONTROL)
+123. Test IFOpenDevice with pointer device handle = NULL
+124. Test IFOpenDevice with invalid access mode = DEVICE_ACCESS_EXCLUSIVE+1
+
+**********************************************************************
+==> Running Interface_IFGetDeviceInfo:
+125. Test standard IFGetDeviceInfo
+126. Test IFGetDeviceInfo with closed library before
+127. Test IFGetDeviceInfo with closed system before
+128. Test IFGetDeviceInfo with closed interface before
+129. Test IFGetDeviceInfo with parameter piSize = NULL
+130. Test IFGetDeviceInfo with parameter piType = NULL at second call with initialized buffer
+131. Test IFGetDeviceInfo with interface handle GENTL_INVALID_HANDLE
+132. Test IFGetDeviceInfo with pointer sDeviceID = NULL
+133. Test IFGetDeviceInfo with phantasy sDeviceID
+134. Test IFGetDeviceInfo with parameter iSize = 0 at second call with initialized buffer
+135. Test IFGetDeviceInfo with parameter piSize = NULL at second call with initialized buffer
+
+**********************************************************************
+==> Running Interface_IFGetParentTL:
+136. Test standard IFGetParentTL
+137. Test IFGetParentTL with closed library before
+138. Test IFGetParentTL with closed system before
+139. Test IFGetParentTL with closed interface before
+140. Test IFGetParentTL with interface handle = GENTL_INVALID_HANDLE
+141. Test IFGetParentTL with pointer hSystem = NULL
+
+**********************************************************************
+==> Running DeviceTest:
+142. Test standard DevClose
+143. Test DevClose with closed library before
+144. Test DevClose with closed system before
+145. Test DevClose with closed interface before
+146. Test double DevClose
+147. Test DevClose and reopen
+148. Test DevClose with parameter device handle GENTL_INVALID_HANDLE
+149. Test DevClose with parameter random device handle (0xb7f7b7f7)
+
+**********************************************************************
+==> Running Device_DevGetInfo:
+150. Test standard DevGetInfo
+151. Test DevGetInfo with closed library before
+152. Test DevGetInfo with closed system before
+153. Test DevGetInfo with closed interface before
+154. Test DevGetInfo with closed device before
+155. Test DevGetInfo with parameter piSize = NULL
+156. Test DevGetInfo with parameter piType = NULL at second call with initialized buffer
+157. Test DevGetInfo with parameter device handle = GENTL_INVALID_HANDLE
+158. Test DevGetInfo with parameter iSize = 0 at second call with initialized buffer
+159. Test DevGetInfo with parameter piSize = NULL at second call with initialized buffer
+160. Test DevGetInfo with parameter iSize = iSize-1 at second call with initialized buffer
+
+**********************************************************************
+==> Running Device_DevGetNumDataStreams:
+161. Test standard DevGetNumDataStreams
+162. Test DevGetNumDataStreams with closed library before
+163. Test DevGetNumDataStreams with closed system before
+164. Test DevGetNumDataStreams with closed interface before
+165. Test DevGetNumDataStreams with closed device before
+166. Test DevGetNumDataStreams with parameter piNumDataStreams = NULL
+167. Test DevGetNumDataStreams with device handle = GENTL_INVALID_HANDLE
+
+**********************************************************************
+==> Running Device_DevGetDataStreamID:
+168. Test standard DevGetDataStreamID
+169. Test DevGetDataStreamID with closed library before
+170. Test DevGetDataStreamID with closed system before
+171. Test DevGetDataStreamID with closed interface before
+172. Test DevGetDataStreamID with closed device before
+173. Test DevGetDataStreamID with parameter piSize = NULL
+174. Test DevGetDataStreamID with parameter device handle = GENTL_INVALID_HANDLE
+175. Test DevGetDataStreamID with parameter index > uiNumDataStreams
+176. Test DevGetDataStreamID with parameter iSize = 0 at second call with initialized buffer
+177. Test DevGetDataStreamID with parameter piSize = NULL at second call with initialized buffer
+178. Test DevGetDataStreamID persistence between two sessions.
+
+**********************************************************************
+==> Running Device_DevGetPort:
+179. Test standard DevGetPort
+180. Test DevGetPort with closed library before
+181. Test DevGetPort with closed system before
+182. Test DevGetPort with closed interface before
+183. Test DevGetPort with closed device before
+184. Test DevGetPort with parameter device handle = GENTL_INVALID_HANDLE
+185. Test DevGetPort with parameter pointer port handle = NULL
+
+**********************************************************************
+==> Running Device_DevOpenDataStream:
+186. Test standard DevOpenDataStream
+187. Test DevOpenDataStream with closed library before
+188. Test DevOpenDataStream with closed system before
+189. Test DevOpenDataStream with closed interface before
+190. Test DevOpenDataStream with closed device before
+191. Test DevOpenDataStream with parameter device handle = GENTL_INVALID_HANDLE
+192. Test DevOpenDataStream with parameter pointer data stream handle = NULL
+193. Test DevOpenDataStream with parameter pointer sDataStreamID = NULL
+194. Test double DevOpenDataStream (see section 3.5)
+
+**********************************************************************
+==> Running Device_DevGetParentIF:
+195. Test standard DevGetParentIF
+196. Test DevGetParentIF with closed library before
+197. Test DevGetParentIF with closed system before
+198. Test DevGetParentIF with closed interface before
+199. Test DevGetParentIF with closed device before
+200. Test DevGetParentIF with device handle = GENTL_INVALID_HANDLE
+201. Test DevGetParentIF with pointer hIf = NULL
+
+**********************************************************************
+==> Running Port_GCGetPortInfo:
+202. Test standard GCGetPortInfo (using system)
+203. Test standard GCGetPortInfo (using interface)
+204. Test standard GCGetPortInfo (using device)
+205. Test standard GCGetPortInfo (using remote device)
+206. Test standard GCGetPortInfo (using datastream)
+207. Test standard GCGetPortInfo (using buffer)
+208. Test GCGetPortInfo with closed library before
+209. Test GCGetPortInfo with closed system before
+210. Test GCGetPortInfo with closed interface before
+211. Test GCGetPortInfo with closed device before
+212. Test GCGetPortInfo with parameter port handle = GENTL_INVALID_HANDLE
+213. Test GCGetPortInfo with parameter iInfoCmd = PORT_INFO_PORTNAME+1
+214. Test GCGetPortInfo with parameter piType = NULL at second call with initialized buffer
+215. Test GCGetPortInfo with parameter piSize = NULL
+216. Test GCGetPortInfo with parameter iSize = iSize - 1 at second call with initialized buffer
+217. Test GCGetPortInfo with parameter piSize = NULL at second call with initialized buffer
+
+**********************************************************************
+==> Running Port_GCGetPortURL:
+218. Test standard GCGetPortURL
+219. Test GCGetPortURL with closed library before
+220. Test GCGetPortURL with closed system before
+221. Test GCGetPortURL with closed interface before
+222. Test GCGetPortURL with closed device before
+223. Test GCGetPortURL with parameter port handle = GENTL_INVALID_HANDLE
+224. Test GCGetPortURL with parameter piSize = NULL
+225. Test GCGetPortURL with parameter iSize = iSize - 1 at second call with initialized buffer
+
+**********************************************************************
+==> Running Port_GCGetNumPortURLs:
+226. Test standard GCGetNumPortURLs
+227. Test GCGetNumPortURLs with closed library before
+228. Test GCGetNumPortURLs with closed system before
+229. Test GCGetNumPortURLs with closed interface before
+230. Test GCGetNumPortURLs with closed device before
+231. Test GCGetNumPortURLs with port handle = GENTL_INVALID_HANDLE
+232. Test GCGetNumPortURLs with parameter piNumURLs = NULL
+
+**********************************************************************
+==> Running Port_GCGetPortURLInfo:
+233. Test standard GCGetPortURLInfo
+234. Test GCGetPortURLInfo with closed library before
+235. Test GCGetPortURLInfo with closed system before
+236. Test GCGetPortURLInfo with closed interface before
+237. Test GCGetPortURLInfo with closed device before
+238. Test GCGetPortURLInfo with port handle = GENTL_INVALID_HANDLE
+239. Test GCGetPortURLInfo with parameter piSize = NULL
+240. Test GCGetPortURLInfo with parameter piType = NULL at second call with initialized buffer
+241. Test GCGetPortURLInfo with parameter iSize = 0 at second call with initialized buffer
+242. Test GCGetPortURLInfo with parameter piSize = NULL at second call with initialized buffer
+243. Test GCGetPortURLInfo with parameter iSize = iSize - 1 at second call with initialized buffer
+244. Test GCGetPortURLInfo with parameter iInfoCmd = URL_INFO_FILE_SHA1_HASH + 1
+245. Test GCGetPortURLInfo with parameter iURLIndex = iNumURLs + 1
+
+**********************************************************************
+==> Running Port_GCReadPort:
+246. Test standard GCReadPort system xml
+247. Test standard GCReadPort all standard entries in 'TLPort' of system xml
+248. Test standard GCReadPort all mandatory entries in 'TLPort' of system xml
+249. Test standard GCReadPort interface xml
+250. Test GCReadPort all standard entries in 'InterfacePort' of interface xml
+251. Test GCReadPort all mandatory entries in 'InterfacePort' of interface xml (see section 7.1.2 preconditions)
+252. Test standard GCReadPort device xml
+253. Test standard GCReadPort all standard entries in 'DevicePort' of device xml
+254. Test standard GCReadPort all mandatory entries in 'DevicePort' of device xml
+255. Test standard GCReadPort remote device xml
+256. Test standard GCReadPort all mandatory entries in 'Device' of remote device xml
+257. Test standard GCReadPort datastream xml
+258. Test standard GCReadPort all standard entries in 'StreamPort' of datastream xml
+259. Test standard GCReadPort all mandatory entries in 'StreamPort' of datastream xml
+260. Test standard GCReadPort all mandatory entries in 'BufferPort' if buffer supports it (see section 4.1 and 4.1.1)
+261. Test GCReadPort device xml with closed library before
+262. Test GCReadPort device xml with closed system before
+263. Test GCReadPort device xml with closed interface before
+264. Test GCReadPort device xml with closed device before
+265. Test GCReadPort device xml with parameter piSize = NULL
+266. Test GCReadPort device xml with parameter iSize = iSize / 2
+267. Test GCReadPort device xml with parameter pBuffer = NULL
+
+**********************************************************************
+==> Running Port_GCWritePort:
+268. Test standard GCWritePort node 'Height' in romte device xml
+269. Test GCWritePort device xml with closed library before
+270. Test GCWritePort device xml with closed system before
+
+**********************************************************************
+==> Running Port_GCReadPortStacked:
+271. Test standard GCReadPortStacked all standard entries in 'TLPort' of system xml
+272. Test GCReadPortStacked all standard entries in 'InterfacePort' of interface xml
+273. Test standard GCReadPortStacked all standard entries in 'DevicePort' of device xml
+274. Test GCReadPortStacked device xml with closed library before
+275. Test GCReadPortStacked device xml with closed system before
+276. Test GCReadPortStacked device xml with closed interface before
+277. Test GCReadPortStacked device xml with closed device before
+278. Test GCReadPortStacked device xml with parameter piNumEntries = NULL
+279. Test GCReadPortStacked device xml with parameter pEntries = NULL
+
+**********************************************************************
+==> Running Port_GCWritePortStacked:
+280. Test standard GCWritePortStacked with 'Height' and 'Width' of remote device xml
+281. Test GCWritePortStacked device xml with closed library before
+282. Test GCWritePortStacked device xml with closed system before
+
+**********************************************************************
+==> Running DataStreamTest:
+283. Test standard DSClose
+284. Test DSClose with closed library before
+285. Test DSClose with closed system before
+286. Test DSClose with closed interface before
+287. Test DSClose with closed device before
+288. Test DSClose with parameter data stream handle GENTL_INVALID_HANDLE
+289. Test double DSClose
+290. Test DSClose reopen
+
+**********************************************************************
+==> Running DataStream_DSGetInfo:
+291. Test standard DSGetInfo
+292. Test DSGetInfo with closed library before
+293. Test DSGetInfo with closed system before
+294. Test DSGetInfo with closed interface before
+295. Test DSGetInfo with closed device before
+296. Test DSGetInfo with closed datastream before
+297. Test DSGetInfo with parameter piSize = NULL
+298. Test DSGetInfo with piType = NULL at second call with initialized buffer
+299. Test DSGetInfo with datastream handle = GENTL_INVALID_HANDLE
+300. Test DSGetInfo with iSize = 0 at second call with initialized buffer
+301. Test DSGetInfo with piSize = NULL at second call with initialized buffer
+302. Test DSGetInfo with parameter iInfoCmd = STREAM_INFO_BUF_ALIGNMENT+1
+
+**********************************************************************
+==> Running DataStream_DSAnnounceBuffer:
+303. Test standard DSAnnounceBuffer (using PayloadSize of device module)
+304. Test standard DSAnnounceBuffer (using PayloadSize of datastream module)
+305. Test DSAnnounceBuffer with closed library before
+306. Test DSAnnounceBuffer with closed system before
+307. Test DSAnnounceBuffer with closed interface before
+308. Test DSAnnounceBuffer with closed device before
+309. Test DSAnnounceBuffer with closed datastream before
+310. Test DSAnnounceBuffer with parameter payload iSize = 0
+311. Test DSAnnounceBuffer with parameter payload pBuffer = NULL
+312. Test DSAnnounceBuffer with datastream handle = GENTL_INVALID_HANDLE
+313. Test DSAnnounceBuffer with parameter pPrivate = NULL
+314. Test DSAnnounceBuffer with parameter phBuffer = NULL
+315. Test DSAnnounceBuffer twice with the same buffer to a single stream (see section 3.6)
+316. Test DSAnnounceBuffer twice with the same buffer to different streams (see section 3.6)
+
+**********************************************************************
+==> Running DataStream_DSQueueBuffer:
+317. Test standard DSQueueBuffer
+318. Test DSQueueBuffer with closed library before
+319. Test DSQueueBuffer with closed system before
+320. Test DSQueueBuffer with closed interface before
+321. Test DSQueueBuffer with closed device before
+322. Test DSQueueBuffer with closed datastream before
+323. Test DSQueueBuffer with datastream handle = GENTL_INVALID_HANDLE
+324. Test DSQueueBuffer with parameter hBuffer = GENTL_INVALID_HANDLE
+
+**********************************************************************
+==> Running DataStream_DSGetBufferInfo:
+325. Test standard DSGetBufferInfo (using DSAnnounceBuffer)
+326. Test standard DSGetBufferInfo (using DSAllocAndAnnounceBuffer)
+327. Test DSGetBufferInfo with closed library before
+328. Test DSGetBufferInfo with closed system before
+329. Test DSGetBufferInfo with closed interface before
+330. Test DSGetBufferInfo with closed device before
+331. Test DSGetBufferInfo with closed datastream before
+332. Test DSGetBufferInfo with parameter piSize = NULL
+333. Test DSGetBufferInfo with piType = NULL at second call with initialized buffer
+334. Test DSGetBufferInfo with datastream handle = GENTL_INVALID_HANDLE
+335. Test DSGetBufferInfo with iSize = 0 at second call with initialized buffer
+336. Test DSGetBufferInfo with piSize = NULL at second call with initialized buffer
+337. Test DSGetBufferInfo with parameter iInfoCmd = BUFFER_INFO_CONTAINS_CHUNKDATA+1
+
+**********************************************************************
+==> Running DataStream_DSGetBufferID:
+338. Test standard DSGetBufferID
+339. Test DSGetBufferID with closed library before
+340. Test DSGetBufferID with closed system before
+341. Test DSGetBufferID with closed interface before
+342. Test DSGetBufferID with closed device before
+343. Test DSGetBufferID with closed datastream before
+344. Test DSGetBufferID with parameter phBuffer = NULL
+345. Test DSGetBufferID with datastream handle = GENTL_INVALID_HANDLE
+346. Test DSGetBufferID with invalid iIndex = uiNumDataStreams+1
+
+**********************************************************************
+==> Running DataStream_DSStartAcquisition:
+347. Test standard DSStartAcquisition
+348. Test DSStartAcquisition with closed library before
+349. Test DSStartAcquisition with closed system before
+350. Test DSStartAcquisition with closed interface before
+351. Test DSStartAcquisition with closed device before
+352. Test DSStartAcquisition with closed datastream before
+353. Test DSStartAcquisition with parameter NumToAcquire = 0
+354. Test DSStartAcquisition with datastream handle = GENTL_INVALID_HANDLE
+355. Test DSStartAcquisition with parameter iStartFlags = ACQ_START_FLAGS_DEFAULT+1
+356. Test DSStartAcquisition with parameter iNumToAcquire = 10
+357. Test DSStartAcquisition with buffer size too small = uiPayLoadSize-1
+358. Test DSStartAcquisition with no buffer
+
+**********************************************************************
+==> Running DataStream_DSStopAcquisition:
+359. Test standard DSStopAcquisition
+360. Test DSStopAcquisition with closed library before
+361. Test DSStopAcquisition with closed system before
+362. Test DSStopAcquisition with closed interface before
+363. Test DSStopAcquisition with closed device before
+364. Test DSStopAcquisition with closed datastream before
+365. Test DSStopAcquisition with datastream handle = GENTL_INVALID_HANDLE
+366. Test DSStopAcquisition with parameter iStopFlags = ACQ_STOP_FLAGS_KILL+1
+
+**********************************************************************
+==> Running DataStream_DSAllocAndAnnounceBuffer:
+367. Test standard DSAllocAndAnnounceBuffer (using PayloadSize by DSGetInfo(STREAM_INFO_PAYLOAD_SIZE))
+368. Test standard DSAllocAndAnnounceBuffer (using PayloadSize of datastream module port)
+369. Test DSAllocAndAnnounceBuffer with closed library before
+370. Test DSAllocAndAnnounceBuffer with closed system before
+371. Test DSAllocAndAnnounceBuffer with closed interface before
+372. Test DSAllocAndAnnounceBuffer with closed device before
+373. Test DSAllocAndAnnounceBuffer with closed datastream before
+374. Test DSAllocAndAnnounceBuffer with parameter payload iBufferSize = 0
+375. Test DSAllocAndAnnounceBuffer with datastream handle = GENTL_INVALID_HANDLE
+376. Test DSAllocAndAnnounceBuffer with parameter pPrivate = NULL
+377. Test DSAllocAndAnnounceBuffer with parameter phBuffer = NULL
+
+**********************************************************************
+==> Running DataStream_DSFlushQueue:
+378. Test standard DSFlushQueue
+379. Test DSFlushQueue with closed library before
+380. Test DSFlushQueue with closed system before
+381. Test DSFlushQueue with closed interface before
+382. Test DSFlushQueue with closed device before
+383. Test DSFlushQueue with closed datastream before
+384. Test DSFlushQueue with datastream handle = GENTL_INVALID_HANDLE
+385. Test DSFlushQueue with parameter OperationFlags = ACQ_QUEUE_ALL_DISCARD+1
+
+**********************************************************************
+==> Running DataStream_DSRevokeBuffer:
+386. Test standard DSRevokeBuffer (precondition DSAllocAndAnnounceBuffer)
+387. Test standard DSRevokeBuffer (precondition DSAnnounceBuffer)
+388. Test DSRevokeBuffer of a queued buffer
+389. Test DSRevokeBuffer with closed library before
+390. Test DSRevokeBuffer with closed system before
+391. Test DSRevokeBuffer with closed interface before
+392. Test DSRevokeBuffer with closed device before
+393. Test DSRevokeBuffer with closed datastream before
+394. Test DSRevokeBuffer with datastream handle = GENTL_INVALID_HANDLE
+395. Test DSRevokeBuffer with parameter private data (precondition DSAllocAndAnnounceBuffer)
+396. Test DSRevokeBuffer with parameter buffer pointer (precondition DSAllocAndAnnounceBuffer)
+397. Test DSRevokeBuffer with parameter hBuffer = GENTL_INVALID_HANDLE
+
+**********************************************************************
+==> Running DataStream_DSGetBufferChunkData:
+398. Test DSGetBufferChunkData with closed library before
+399. Test DSGetBufferChunkData with closed system before
+400. Test DSGetBufferChunkData with closed interface before
+401. Test DSGetBufferChunkData with closed device before
+402. Test DSGetBufferChunkData with closed datastream before
+403. Test DSGetBufferChunkData with parameter piNumChunks = NULL
+404. Test DSGetBufferChunkData with datastream handle = NULL
+
+**********************************************************************
+==> Running DataStream_DSGetParentDev:
+405. Test standard DSGetParentDev
+406. Test DSGetParentDev with closed library before
+407. Test DSGetParentDev with closed system before
+408. Test DSGetParentDev with closed interface before
+409. Test DSGetParentDev with closed device before
+410. Test DSGetParentDev with closed datastream before
+411. Test DSGetParentDev with datastream handle = GENTL_INVALID_HANDLE
+412. Test DSGetParentDev with pointer hDev = NULL
+
+**********************************************************************
+==> Running Signaling_GCRegisterEvent:
+413. Test standard GCRegisterEvent (System)
+414. Test standard GCRegisterEvent (Interface)
+415. Test standard GCRegisterEvent (Device)
+416. Test standard GCRegisterEvent (DataStream)
+417. Test GCRegisterEvent with closed library before
+418. Test GCRegisterEvent with closed system before
+419. Test GCRegisterEvent with closed interface before
+420. Test GCRegisterEvent with closed device before
+421. Test GCRegisterEvent with closed datastream before
+422. Test GCRegisterEvent with datastream handle = GENTL_INVALID_HANDLE
+423. Test GCRegisterEvent with parameter iEventID = EVENT_MODULE+1
+424. Test GCRegisterEvent with parameter phEvent = NULL
+425. Test GCRegisterEvent one event twice in one module.
+
+**********************************************************************
+==> Running Signaling_GCUnregisterEvent:
+426. Test standard GCUnregisterEvent (System)
+427. Test standard GCUnregisterEvent (Interface)
+428. Test standard GCUnregisterEvent (Device)
+429. Test standard GCUnregisterEvent (DataStream)
+430. Test GCUnregisterEvent with closed library before
+431. Test GCUnregisterEvent with closed system before
+432. Test GCUnregisterEvent with closed interface before
+433. Test GCUnregisterEvent with closed device before
+434. Test GCUnregisterEvent with closed datastream before
+435. Test GCUnregisterEvent with datastream handle = GENTL_INVALID_HANDLE
+436. Test GCUnregisterEvent with parameter iEventID = EVENT_MODULE+1
+
+**********************************************************************
+==> Running Signaling_TLParamsLocked:
+437. Test standard remote device feature 'TLParamsLocked'
+
+**********************************************************************
+==> Running Signaling_StartDevice:
+438. Test standard start the acquisition inside the remote device
+
+**********************************************************************
+==> Running Signaling_StopDevice:
+439. Test standard stop the acquisition inside the remote device
+
+**********************************************************************
+==> Running Signaling_EventGetInfo:
+440. Test standard EventGetInfo
+441. Test EventGetInfo with closed library before
+442. Test EventGetInfo with closed system before
+443. Test EventGetInfo with closed interface before
+444. Test EventGetInfo with closed device before
+445. Test EventGetInfo with closed datastream before
+446. Test EventGetInfo with unregistered event before
+447. Test EventGetInfo with event handle = GENTL_INVALID_HANDLE
+448. Test EventGetInfo with parameter iInfoCmd = EVENT_INFO_DATA_SIZE_MAX+1
+449. Test EventGetInfo with parameter piType = NULL at second call with initialized buffer
+450. Test EventGetInfo with parameter piSize = NULL
+451. Test EventGetInfo with parameter iSize = 0 at second call with initialized buffer
+452. Test EventGetInfo with parameter piSize = NULL at second call with initialized buffer
+
+**********************************************************************
+==> Running Signaling_EventGetData:
+453. Test standard EventGetData (using DSAnnounceBuffer)
+454. Test standard EventGetData (using DSAllocAndAnnounceBuffer)
+455. Test EventGetData with closed library before
+456. Test EventGetData with closed system before
+457. Test EventGetData with closed interface before
+458. Test EventGetData with closed device before
+459. Test EventGetData with closed datastream before
+460. Test EventGetData with unregistered event before
+461. Test EventGetData with event handle = GENTL_INVALID_HANDLE
+462. Test EventGetData with parameter pBuffer = NULL
+463. Test EventGetData with parameter buffer piSize = NULL
+464. Test EventGetData with parameter iSize = iSize - 1
+465. Test EventGetData with parameter iTimeout = 0
+
+**********************************************************************
+==> Running Signaling_EventGetDataInfo:
+466. Test standard EventGetDataInfo
+467. Test EventGetDataInfo with closed library before
+468. Test EventGetDataInfo with closed system before
+469. Test EventGetDataInfo with closed interface before
+470. Test EventGetDataInfo with closed device before
+471. Test EventGetDataInfo with closed datastream before
+472. Test EventGetDataInfo with unregistered event before
+473. Test EventGetDataInfo with event handle = GENTL_INVALID_HANDLE
+474. Test EventGetDataInfo with parameter iInfoCmd = EVENT_DATA_NUMID+1
+475. Test EventGetDataInfo with parameter piType = NULL at second call with initialized buffer
+476. Test EventGetDataInfo with parameter piSize = NULL
+477. Test EventGetDataInfo with parameter iSize = 0 at second call with initialized buffer
+478. Test EventGetDataInfo with parameter piSize = NULL at second call with initialized buffer
+479. Test EventGetDataInfo with parameter pInBuffer = NULL
+480. Test EventGetDataInfo with parameter iInSize = 0
+481. Test EventGetDataInfo with parameter iInSize = iInSize-1
+
+**********************************************************************
+==> Running Signaling_EventKill:
+482. Test EventKill with closed library before
+483. Test EventKill with closed system before
+484. Test EventKill with closed interface before
+485. Test EventKill with closed device before
+486. Test EventKill with closed datastream before
+487. Test EventKill with unregistered event before
+488. Test EventKill with event handle = GENTL_INVALID_HANDLE
+
+**********************************************************************
+==> Running Signaling_EventFlush:
+489. Test standard EventFlush
+490. Test EventFlush with closed library before
+491. Test EventFlush with closed system before
+492. Test EventFlush with closed interface before
+493. Test EventFlush with closed device before
+494. Test EventFlush with closed datastream before
+495. Test EventFlush with unregistered event before
+496. Test EventFlush with event handle = GENTL_INVALID_HANDLE
+
+**********************************************************************
+==> Running Impl_Test:
+497. Test standard acquisition with registered event EVENT_NEW_BUFFER (using DSAnnounceBuffer)
+498. Test standard acquisition with registered event EVENT_NEW_BUFFER for correct event amount of 10 (using DSAnnounceBuffer)
+499. Test standard acquisition with registered event EVENT_NEW_BUFFER (using DSAnnounceBuffer and DSGetInfo)
+500. Test standard acquisition with registered event EVENT_NEW_BUFFER (using DSAllocAndAnnounceBuffer)
+501. Test while receiving event EVENT_NEW_BUFFER if DSGetBufferInfo BUFFER_INFO_NEW_DATA returns true (using DSAllocAndAnnounceBuffer)
+502. Test GCGetPortInfo check Portnames (see section 4.1.1)
+503. Test buffer pool lock during running aquisition (see section 5.1.1 and 5.2.2)
+
+**********************************************************************
+==> Running Impl_Test2:
+504. Test acquisition with registered event EVENT_NEW_BUFFER and get buffer chunk data (using DSAnnounceBuffer)
+505. Test acquisition with registered event EVENT_NEW_BUFFER and get buffer chunk data (using DSAllocAndAnnounceBuffer)
+======================================================================
+GenICam Transport Layer Validation Framework Report
+----------------------------------------------------------------------
+Date                         : 13:34:59 04/10/24
+Validation Framework Version : 0.0.0.31
+Check for GenICam TL Version = 1.4
+Running 505 test cases...
+
+**********************************************************************
+==> Running vTestFnExportTestWrapper:
+1. Test if GenTL functions version 1.4 exported.
+2. System information of current Transport Layer
+
+**********************************************************************
+==> Running LibraryTest:
+3. Test standard GCInitLib
+4. Test standard GCInitLib, GCCloseLib
+5. Test double GCInitLib (see section 3.1 and 3.2 and 6.1.5)
+6. Test double GCCloseLib (see section 3.1 and 3.2 and 6.1.5)
+7. Test GCCloseLib without GCInitLib before (see section 3.1 and 3.2 and 6.1.5)
+8. Test standard GCGetLastError with double GCInitLib before as error (error value GC_ERR_RESOURCE_IN_USE)
+9. Test GCGetLastError without GCInitLib before (see section 3.1 and 6.3.1)
+10. Test GCGetLastError in case of last return value GC_ERR_SUCCESS => expect GC_ERR_SUCCESS.
+11. Test GCGetLastError with parameter piErrorCode=NULL (see section 6.1.5)
+12. Test GCGetLastError with parameter piSize=NULL (see section 6.1.5)
+13. Test GCGetLastError with parameter piErrorCode=NULL at second call with initialized buffer (see section 6.1.5)
+14. Test GCGetLastError with parameter piSize=NULL at second call with initialized buffer (see section 6.1.5)
+15. Test GCGetLastError with parameter piSize=piSize-1 at second call with initialized buffer (see section 6.1.5)
+
+**********************************************************************
+==> Running Library_GCGetInfo:
+16. Test standard GCGetInfo
+17. Test GCGetInfo without GCInitLib before
+18. Test GCGetInfo with parameter piSize=NULL at call with initialized buffer
+19. Test GCGetInfo with parameter piSize=NULL at call for size check
+20. Test GCGetInfo with parameter iSize=iSize-1 at call with initialized buffer
+21. Test GCGetInfo with piType = NULL at second call with initialized buffer
+22. Test GCGetInfo with parameter iInfoCmd=TL_INFO_GENTL_VER_MINOR+1 (Test case edited for GenTL 1.5, more inforamtion in source code commented section)
+
+**********************************************************************
+==> Running SystemTest:
+23. Test standard TLOpen TLClose
+24. Test TLOpen with closed library
+25. Test double TLOpen (see section 3.2 and 6.1.5)
+26. Test TLOpen with handle pointer NULL
+27. Test TLClose with closed library
+28. Test TLClose without TLOpen before
+29. Test double TLClose with TLOpen before
+
+**********************************************************************
+==> Running System_TLUpdateInterface:
+30. Test standard TLUpdateInterfaceList (using 1000msec timeout)
+31. Test TLUpdateInterfaceList with closed library before
+32. Test TLUpdateInterfaceList with closed system before
+33. Test TLUpdateInterfaceList with TL Handle = GENTL_INVALID_HANDLE
+34. Test TLUpdateInterfaceList with pbChanged = NULL
+
+**********************************************************************
+==> Running System_TLGetInfo:
+35. Test standard TLGetInfo
+36. Test TLGetInfo with closed library before
+37. Test TLGetInfo with closed system before
+38. Test TLGetInfo with TL handle = GENTL_INVALID_HANDLE
+39. Test TLGetInfo with TL info command = TL_INFO_GENTL_VER_MINOR+1  (Test case edited for GenTL 1.5, more inforamtion in source code commented section)
+40. Test TLGetInfo with piType = NULL at second call with initialized buffer
+41. Test TLGetInfo with piSize = NULL
+42. Test TLGetInfo with initialized buffer and iSize = iSize-1
+43. Test TLGetInfo with initialized buffer and piSize = NULL
+
+**********************************************************************
+==> Running System_TLGetNumInterfaces:
+44. Test standard TLGetNumInterfaces
+45. Test TLGetNumInterfaces with closed library before
+46. Test TLGetNumInterfaces with closed system before
+47. Test TLGetNumInterfaces with TL Handle GENTL_INVALID_HANDLE
+48. Test TLGetNumInterfaces with parameter piNumIfaces NULL
+49. Test TLGetNumInterfaces check for number of interfaces > 0
+
+**********************************************************************
+==> Running System_TLGetInterfaceID:
+50. Test standard TLGetInterfaceID
+51. Test TLGetInterfaceID with closed library before
+52. Test TLGetInterfaceID with closed system before
+53. Test TLGetInterfaceID with TL handle = GENTL_INVALID_HANDLE
+54. Test TLGetInterfaceID with piSize NULL
+55. Test TLGetInterfaceID with initialized buffer and piSize NULL
+56. Test TLGetInterfaceID with index > number interfaces
+57. Test TLGetInterfaceID persistence after TLUpdateInterfaceList
+
+**********************************************************************
+==> Running System_TLOpenInterface:
+58. Test standard TLOpenInterface
+59. Test TLOpenInterface with known interface ID (see section 3.2)
+60. Test TLOpenInterface with closed library before
+61. Test TLOpenInterface with closed system before
+62. Test TLOpenInterface with pointer IF Handle NULL
+63. Test TLOpenInterface with pointer interface ID NULL
+64. Test TLOpenInterface with a phantasy interface ID
+65. Test double TLOpenInterface
+
+**********************************************************************
+==> Running System_TLGetInterfaceInfo:
+66. Test standard TLGetInterfaceInfo
+67. Test TLGetInterfaceInfo with closed library before
+68. Test TLGetInterfaceInfo with closed system before
+69. Test TLGetInterfaceInfo with piSize = NULL
+70. Test TLGetInterfaceInfo with piType = NULL at second call with initialized buffer
+71. Test TLGetInterfaceInfo with pointer interface ID = NULL
+72. Test TLGetInterfaceInfo with initialized buffer and size = 0
+73. Test TLGetInterfaceInfo with initialized buffer and piSize = NULL
+
+**********************************************************************
+==> Running InterfaceTest:
+74. Test standard IFClose
+75. Test IFClose if library closed before
+76. Test IFClose if system closed before
+77. Test double IFClose
+78. Test reopen IFClose
+79. Test IFClose with interface handle = GENTL_INVALID_HANDLE
+80. Test IFClose with phantasy interface handle (0xb7f7b7f7)
+
+**********************************************************************
+==> Running Interface_IFGetInfo:
+81. Test standard IFGetInfo
+82. Test IFGetInfo with closed library before
+83. Test IFGetInfo with closed system before
+84. Test IFGetInfo with interface handel GENTL_INVALID_HANDLE
+85. Test IFGetInfo with invalid command=INTERFACE_INFO_TLTYPE+1
+86. Test IFGetInfo with closed interface before
+87. Test IFGetInfo with parameter piSize = NULL
+88. Test IFGetInfo with piType = NULL at second call with initialized buffer
+
+**********************************************************************
+==> Running Interface_IFUpdateDeviceList:
+89. Test standard IFUpdateDeviceList (using 1000msec timeout)
+90. Test IFUpdateDeviceList with closed library before
+91. Test IFUpdateDeviceList with closed system before
+92. Test IFUpdateDeviceList with closed interface before
+93. Test IFUpdateDeviceList with interface handle = GENTL_INVALID_HANDLE
+94. Test IFUpdateDeviceList with parameter pbChanged = NULL
+
+**********************************************************************
+==> Running Interface_IFGetNumDevices:
+95. Test standard IFGetNumDevices
+96. Test IFGetNumDevices with closed library before
+97. Test IFGetNumDevices with closed system before
+98. Test IFGetNumDevices with closed interface before
+99. Test IFGetNumDevices with interface handle GENTL_INVALID_HANDLE
+100. Test IFGetNumDevices with parameter piNumDevices = NULL
+101. Test IFGetNumDevices without update device list before
+
+**********************************************************************
+==> Running Interface_IFGetDeviceID:
+102. Test standard IFGetDeviceID
+103. Test IFGetDeviceID with closed library before
+104. Test IFGetDeviceID with closed system before
+105. Test IFGetDeviceID with closed interface before
+106. Test IFGetDeviceID with parameter interface handle GENTL_INVALID_HANDLE
+107. Test IFGetDeviceID with parameter piSize = NULL in size check call
+108. Test IFGetDeviceID with parameter piSize = NULL in call with initialized buffer
+109. Test IFGetDeviceID with parameter index > number of devices
+110. Test IFGetDeviceID with parameter iSize = iSize-1 in call with initialized buffer
+111. Test IFGetDeviceID persistence after IFUpdateDeviceList
+
+**********************************************************************
+==> Running Interface_IFOpenDevice:
+112. Test standard IFOpenDevice
+113. Test IFOpenDevice with known device ID (see section 3.3)
+114. Test IFOpenDevice with closed library before
+115. Test IFOpenDevice with closed system before
+116. Test IFOpenDevice with closed interface before
+117. Test IFOpenDevice with interface handle = GENTL_INVALID_HANDLE
+118. Test IFOpenDevice with pointer sDeviceID = NULL
+119. Test IFOpenDevice with phantasy sDeviceID
+120. Test double IFOpenDevice (see section 3.4)
+121. Test multiple IFOpenDevice (mode DEVICE_ACCESS_CONTROL and mode DEVICE_ACCESS_READONLY)
+122. Test multiple IFOpenDevice (mode DEVICE_ACCESS_EXCLUSIVE and mode DEVICE_ACCESS_READONLY and mode DEVICE_ACCESS_CONTROL)
+123. Test IFOpenDevice with pointer device handle = NULL
+124. Test IFOpenDevice with invalid access mode = DEVICE_ACCESS_EXCLUSIVE+1
+
+**********************************************************************
+==> Running Interface_IFGetDeviceInfo:
+125. Test standard IFGetDeviceInfo
+126. Test IFGetDeviceInfo with closed library before
+127. Test IFGetDeviceInfo with closed system before
+128. Test IFGetDeviceInfo with closed interface before
+129. Test IFGetDeviceInfo with parameter piSize = NULL
+130. Test IFGetDeviceInfo with parameter piType = NULL at second call with initialized buffer
+131. Test IFGetDeviceInfo with interface handle GENTL_INVALID_HANDLE
+132. Test IFGetDeviceInfo with pointer sDeviceID = NULL
+133. Test IFGetDeviceInfo with phantasy sDeviceID
+134. Test IFGetDeviceInfo with parameter iSize = 0 at second call with initialized buffer
+135. Test IFGetDeviceInfo with parameter piSize = NULL at second call with initialized buffer
+
+**********************************************************************
+==> Running Interface_IFGetParentTL:
+136. Test standard IFGetParentTL
+137. Test IFGetParentTL with closed library before
+138. Test IFGetParentTL with closed system before
+139. Test IFGetParentTL with closed interface before
+140. Test IFGetParentTL with interface handle = GENTL_INVALID_HANDLE
+141. Test IFGetParentTL with pointer hSystem = NULL
+
+**********************************************************************
+==> Running DeviceTest:
+142. Test standard DevClose
+143. Test DevClose with closed library before
+144. Test DevClose with closed system before
+145. Test DevClose with closed interface before
+146. Test double DevClose
+147. Test DevClose and reopen
+148. Test DevClose with parameter device handle GENTL_INVALID_HANDLE
+149. Test DevClose with parameter random device handle (0xb7f7b7f7)
+
+**********************************************************************
+==> Running Device_DevGetInfo:
+150. Test standard DevGetInfo
+151. Test DevGetInfo with closed library before
+152. Test DevGetInfo with closed system before
+153. Test DevGetInfo with closed interface before
+154. Test DevGetInfo with closed device before
+155. Test DevGetInfo with parameter piSize = NULL
+156. Test DevGetInfo with parameter piType = NULL at second call with initialized buffer
+157. Test DevGetInfo with parameter device handle = GENTL_INVALID_HANDLE
+158. Test DevGetInfo with parameter iSize = 0 at second call with initialized buffer
+159. Test DevGetInfo with parameter piSize = NULL at second call with initialized buffer
+160. Test DevGetInfo with parameter iSize = iSize-1 at second call with initialized buffer
+
+**********************************************************************
+==> Running Device_DevGetNumDataStreams:
+161. Test standard DevGetNumDataStreams
+162. Test DevGetNumDataStreams with closed library before
+163. Test DevGetNumDataStreams with closed system before
+164. Test DevGetNumDataStreams with closed interface before
+165. Test DevGetNumDataStreams with closed device before
+166. Test DevGetNumDataStreams with parameter piNumDataStreams = NULL
+167. Test DevGetNumDataStreams with device handle = GENTL_INVALID_HANDLE
+
+**********************************************************************
+==> Running Device_DevGetDataStreamID:
+168. Test standard DevGetDataStreamID
+169. Test DevGetDataStreamID with closed library before
+170. Test DevGetDataStreamID with closed system before
+171. Test DevGetDataStreamID with closed interface before
+172. Test DevGetDataStreamID with closed device before
+173. Test DevGetDataStreamID with parameter piSize = NULL
+174. Test DevGetDataStreamID with parameter device handle = GENTL_INVALID_HANDLE
+175. Test DevGetDataStreamID with parameter index > uiNumDataStreams
+176. Test DevGetDataStreamID with parameter iSize = 0 at second call with initialized buffer
+177. Test DevGetDataStreamID with parameter piSize = NULL at second call with initialized buffer
+178. Test DevGetDataStreamID persistence between two sessions.
+
+**********************************************************************
+==> Running Device_DevGetPort:
+179. Test standard DevGetPort
+180. Test DevGetPort with closed library before
+181. Test DevGetPort with closed system before
+182. Test DevGetPort with closed interface before
+183. Test DevGetPort with closed device before
+184. Test DevGetPort with parameter device handle = GENTL_INVALID_HANDLE
+185. Test DevGetPort with parameter pointer port handle = NULL
+
+**********************************************************************
+==> Running Device_DevOpenDataStream:
+186. Test standard DevOpenDataStream
+187. Test DevOpenDataStream with closed library before
+188. Test DevOpenDataStream with closed system before
+189. Test DevOpenDataStream with closed interface before
+190. Test DevOpenDataStream with closed device before
+191. Test DevOpenDataStream with parameter device handle = GENTL_INVALID_HANDLE
+192. Test DevOpenDataStream with parameter pointer data stream handle = NULL
+193. Test DevOpenDataStream with parameter pointer sDataStreamID = NULL
+194. Test double DevOpenDataStream (see section 3.5)
+
+**********************************************************************
+==> Running Device_DevGetParentIF:
+195. Test standard DevGetParentIF
+196. Test DevGetParentIF with closed library before
+197. Test DevGetParentIF with closed system before
+198. Test DevGetParentIF with closed interface before
+199. Test DevGetParentIF with closed device before
+200. Test DevGetParentIF with device handle = GENTL_INVALID_HANDLE
+201. Test DevGetParentIF with pointer hIf = NULL
+
+**********************************************************************
+==> Running Port_GCGetPortInfo:
+202. Test standard GCGetPortInfo (using system)
+203. Test standard GCGetPortInfo (using interface)
+204. Test standard GCGetPortInfo (using device)
+205. Test standard GCGetPortInfo (using remote device)
+206. Test standard GCGetPortInfo (using datastream)
+207. Test standard GCGetPortInfo (using buffer)
+208. Test GCGetPortInfo with closed library before
+209. Test GCGetPortInfo with closed system before
+210. Test GCGetPortInfo with closed interface before
+211. Test GCGetPortInfo with closed device before
+212. Test GCGetPortInfo with parameter port handle = GENTL_INVALID_HANDLE
+213. Test GCGetPortInfo with parameter iInfoCmd = PORT_INFO_PORTNAME+1
+214. Test GCGetPortInfo with parameter piType = NULL at second call with initialized buffer
+215. Test GCGetPortInfo with parameter piSize = NULL
+216. Test GCGetPortInfo with parameter iSize = iSize - 1 at second call with initialized buffer
+217. Test GCGetPortInfo with parameter piSize = NULL at second call with initialized buffer
+
+**********************************************************************
+==> Running Port_GCGetPortURL:
+218. Test standard GCGetPortURL
+219. Test GCGetPortURL with closed library before
+220. Test GCGetPortURL with closed system before
+221. Test GCGetPortURL with closed interface before
+222. Test GCGetPortURL with closed device before
+223. Test GCGetPortURL with parameter port handle = GENTL_INVALID_HANDLE
+224. Test GCGetPortURL with parameter piSize = NULL
+225. Test GCGetPortURL with parameter iSize = iSize - 1 at second call with initialized buffer
+
+**********************************************************************
+==> Running Port_GCGetNumPortURLs:
+226. Test standard GCGetNumPortURLs
+227. Test GCGetNumPortURLs with closed library before
+228. Test GCGetNumPortURLs with closed system before
+229. Test GCGetNumPortURLs with closed interface before
+230. Test GCGetNumPortURLs with closed device before
+231. Test GCGetNumPortURLs with port handle = GENTL_INVALID_HANDLE
+232. Test GCGetNumPortURLs with parameter piNumURLs = NULL
+
+**********************************************************************
+==> Running Port_GCGetPortURLInfo:
+233. Test standard GCGetPortURLInfo
+234. Test GCGetPortURLInfo with closed library before
+235. Test GCGetPortURLInfo with closed system before
+236. Test GCGetPortURLInfo with closed interface before
+237. Test GCGetPortURLInfo with closed device before
+238. Test GCGetPortURLInfo with port handle = GENTL_INVALID_HANDLE
+239. Test GCGetPortURLInfo with parameter piSize = NULL
+240. Test GCGetPortURLInfo with parameter piType = NULL at second call with initialized buffer
+241. Test GCGetPortURLInfo with parameter iSize = 0 at second call with initialized buffer
+242. Test GCGetPortURLInfo with parameter piSize = NULL at second call with initialized buffer
+243. Test GCGetPortURLInfo with parameter iSize = iSize - 1 at second call with initialized buffer
+244. Test GCGetPortURLInfo with parameter iInfoCmd = URL_INFO_FILE_SHA1_HASH + 1
+245. Test GCGetPortURLInfo with parameter iURLIndex = iNumURLs + 1
+
+**********************************************************************
+==> Running Port_GCReadPort:
+246. Test standard GCReadPort system xml
+247. Test standard GCReadPort all standard entries in 'TLPort' of system xml
+248. Test standard GCReadPort all mandatory entries in 'TLPort' of system xml
+249. Test standard GCReadPort interface xml
+250. Test GCReadPort all standard entries in 'InterfacePort' of interface xml
+251. Test GCReadPort all mandatory entries in 'InterfacePort' of interface xml (see section 7.1.2 preconditions)
+252. Test standard GCReadPort device xml
+253. Test standard GCReadPort all standard entries in 'DevicePort' of device xml
+254. Test standard GCReadPort all mandatory entries in 'DevicePort' of device xml
+255. Test standard GCReadPort remote device xml
+256. Test standard GCReadPort all mandatory entries in 'Device' of remote device xml
+257. Test standard GCReadPort datastream xml
+258. Test standard GCReadPort all standard entries in 'StreamPort' of datastream xml
+259. Test standard GCReadPort all mandatory entries in 'StreamPort' of datastream xml
+260. Test standard GCReadPort all mandatory entries in 'BufferPort' if buffer supports it (see section 4.1 and 4.1.1)
+261. Test GCReadPort device xml with closed library before
+262. Test GCReadPort device xml with closed system before
+263. Test GCReadPort device xml with closed interface before
+264. Test GCReadPort device xml with closed device before
+265. Test GCReadPort device xml with parameter piSize = NULL
+266. Test GCReadPort device xml with parameter iSize = iSize / 2
+267. Test GCReadPort device xml with parameter pBuffer = NULL
+
+**********************************************************************
+==> Running Port_GCWritePort:
+268. Test standard GCWritePort node 'Height' in romte device xml
+269. Test GCWritePort device xml with closed library before
+270. Test GCWritePort device xml with closed system before
+
+**********************************************************************
+==> Running Port_GCReadPortStacked:
+271. Test standard GCReadPortStacked all standard entries in 'TLPort' of system xml
+272. Test GCReadPortStacked all standard entries in 'InterfacePort' of interface xml
+273. Test standard GCReadPortStacked all standard entries in 'DevicePort' of device xml
+274. Test GCReadPortStacked device xml with closed library before
+275. Test GCReadPortStacked device xml with closed system before
+276. Test GCReadPortStacked device xml with closed interface before
+277. Test GCReadPortStacked device xml with closed device before
+278. Test GCReadPortStacked device xml with parameter piNumEntries = NULL
+279. Test GCReadPortStacked device xml with parameter pEntries = NULL
+
+**********************************************************************
+==> Running Port_GCWritePortStacked:
+280. Test standard GCWritePortStacked with 'Height' and 'Width' of remote device xml
+281. Test GCWritePortStacked device xml with closed library before
+282. Test GCWritePortStacked device xml with closed system before
+
+**********************************************************************
+==> Running DataStreamTest:
+283. Test standard DSClose
+284. Test DSClose with closed library before
+285. Test DSClose with closed system before
+286. Test DSClose with closed interface before
+287. Test DSClose with closed device before
+288. Test DSClose with parameter data stream handle GENTL_INVALID_HANDLE
+289. Test double DSClose
+290. Test DSClose reopen
+
+**********************************************************************
+==> Running DataStream_DSGetInfo:
+291. Test standard DSGetInfo
+292. Test DSGetInfo with closed library before
+293. Test DSGetInfo with closed system before
+294. Test DSGetInfo with closed interface before
+295. Test DSGetInfo with closed device before
+296. Test DSGetInfo with closed datastream before
+297. Test DSGetInfo with parameter piSize = NULL
+298. Test DSGetInfo with piType = NULL at second call with initialized buffer
+299. Test DSGetInfo with datastream handle = GENTL_INVALID_HANDLE
+300. Test DSGetInfo with iSize = 0 at second call with initialized buffer
+301. Test DSGetInfo with piSize = NULL at second call with initialized buffer
+302. Test DSGetInfo with parameter iInfoCmd = STREAM_INFO_BUF_ALIGNMENT+1
+
+**********************************************************************
+==> Running DataStream_DSAnnounceBuffer:
+303. Test standard DSAnnounceBuffer (using PayloadSize of device module)
+304. Test standard DSAnnounceBuffer (using PayloadSize of datastream module)
+305. Test DSAnnounceBuffer with closed library before
+306. Test DSAnnounceBuffer with closed system before
+307. Test DSAnnounceBuffer with closed interface before
+308. Test DSAnnounceBuffer with closed device before
+309. Test DSAnnounceBuffer with closed datastream before
+310. Test DSAnnounceBuffer with parameter payload iSize = 0
+311. Test DSAnnounceBuffer with parameter payload pBuffer = NULL
+312. Test DSAnnounceBuffer with datastream handle = GENTL_INVALID_HANDLE
+313. Test DSAnnounceBuffer with parameter pPrivate = NULL
+314. Test DSAnnounceBuffer with parameter phBuffer = NULL
+315. Test DSAnnounceBuffer twice with the same buffer to a single stream (see section 3.6)
+316. Test DSAnnounceBuffer twice with the same buffer to different streams (see section 3.6)
+
+**********************************************************************
+==> Running DataStream_DSQueueBuffer:
+317. Test standard DSQueueBuffer
+318. Test DSQueueBuffer with closed library before
+319. Test DSQueueBuffer with closed system before
+320. Test DSQueueBuffer with closed interface before
+321. Test DSQueueBuffer with closed device before
+322. Test DSQueueBuffer with closed datastream before
+323. Test DSQueueBuffer with datastream handle = GENTL_INVALID_HANDLE
+324. Test DSQueueBuffer with parameter hBuffer = GENTL_INVALID_HANDLE
+
+**********************************************************************
+==> Running DataStream_DSGetBufferInfo:
+325. Test standard DSGetBufferInfo (using DSAnnounceBuffer)
+326. Test standard DSGetBufferInfo (using DSAllocAndAnnounceBuffer)
+327. Test DSGetBufferInfo with closed library before
+328. Test DSGetBufferInfo with closed system before
+329. Test DSGetBufferInfo with closed interface before
+330. Test DSGetBufferInfo with closed device before
+331. Test DSGetBufferInfo with closed datastream before
+332. Test DSGetBufferInfo with parameter piSize = NULL
+333. Test DSGetBufferInfo with piType = NULL at second call with initialized buffer
+334. Test DSGetBufferInfo with datastream handle = GENTL_INVALID_HANDLE
+335. Test DSGetBufferInfo with iSize = 0 at second call with initialized buffer
+336. Test DSGetBufferInfo with piSize = NULL at second call with initialized buffer
+337. Test DSGetBufferInfo with parameter iInfoCmd = BUFFER_INFO_CONTAINS_CHUNKDATA+1
+
+**********************************************************************
+==> Running DataStream_DSGetBufferID:
+338. Test standard DSGetBufferID
+339. Test DSGetBufferID with closed library before
+340. Test DSGetBufferID with closed system before
+341. Test DSGetBufferID with closed interface before
+342. Test DSGetBufferID with closed device before
+343. Test DSGetBufferID with closed datastream before
+344. Test DSGetBufferID with parameter phBuffer = NULL
+345. Test DSGetBufferID with datastream handle = GENTL_INVALID_HANDLE
+346. Test DSGetBufferID with invalid iIndex = uiNumDataStreams+1
+
+**********************************************************************
+==> Running DataStream_DSStartAcquisition:
+347. Test standard DSStartAcquisition
+348. Test DSStartAcquisition with closed library before
+349. Test DSStartAcquisition with closed system before
+350. Test DSStartAcquisition with closed interface before
+351. Test DSStartAcquisition with closed device before
+352. Test DSStartAcquisition with closed datastream before
+353. Test DSStartAcquisition with parameter NumToAcquire = 0
+354. Test DSStartAcquisition with datastream handle = GENTL_INVALID_HANDLE
+355. Test DSStartAcquisition with parameter iStartFlags = ACQ_START_FLAGS_DEFAULT+1
+356. Test DSStartAcquisition with parameter iNumToAcquire = 10
+357. Test DSStartAcquisition with buffer size too small = uiPayLoadSize-1
+358. Test DSStartAcquisition with no buffer
+
+**********************************************************************
+==> Running DataStream_DSStopAcquisition:
+359. Test standard DSStopAcquisition
+360. Test DSStopAcquisition with closed library before
+361. Test DSStopAcquisition with closed system before
+362. Test DSStopAcquisition with closed interface before
+363. Test DSStopAcquisition with closed device before
+364. Test DSStopAcquisition with closed datastream before
+365. Test DSStopAcquisition with datastream handle = GENTL_INVALID_HANDLE
+366. Test DSStopAcquisition with parameter iStopFlags = ACQ_STOP_FLAGS_KILL+1
+
+**********************************************************************
+==> Running DataStream_DSAllocAndAnnounceBuffer:
+367. Test standard DSAllocAndAnnounceBuffer (using PayloadSize by DSGetInfo(STREAM_INFO_PAYLOAD_SIZE))
+368. Test standard DSAllocAndAnnounceBuffer (using PayloadSize of datastream module port)
+369. Test DSAllocAndAnnounceBuffer with closed library before
+370. Test DSAllocAndAnnounceBuffer with closed system before
+371. Test DSAllocAndAnnounceBuffer with closed interface before
+372. Test DSAllocAndAnnounceBuffer with closed device before
+373. Test DSAllocAndAnnounceBuffer with closed datastream before
+374. Test DSAllocAndAnnounceBuffer with parameter payload iBufferSize = 0
+375. Test DSAllocAndAnnounceBuffer with datastream handle = GENTL_INVALID_HANDLE
+376. Test DSAllocAndAnnounceBuffer with parameter pPrivate = NULL
+377. Test DSAllocAndAnnounceBuffer with parameter phBuffer = NULL
+
+**********************************************************************
+==> Running DataStream_DSFlushQueue:
+378. Test standard DSFlushQueue
+379. Test DSFlushQueue with closed library before
+380. Test DSFlushQueue with closed system before
+381. Test DSFlushQueue with closed interface before
+382. Test DSFlushQueue with closed device before
+383. Test DSFlushQueue with closed datastream before
+384. Test DSFlushQueue with datastream handle = GENTL_INVALID_HANDLE
+385. Test DSFlushQueue with parameter OperationFlags = ACQ_QUEUE_ALL_DISCARD+1
+
+**********************************************************************
+==> Running DataStream_DSRevokeBuffer:
+386. Test standard DSRevokeBuffer (precondition DSAllocAndAnnounceBuffer)
+387. Test standard DSRevokeBuffer (precondition DSAnnounceBuffer)
+388. Test DSRevokeBuffer of a queued buffer
+389. Test DSRevokeBuffer with closed library before
+390. Test DSRevokeBuffer with closed system before
+391. Test DSRevokeBuffer with closed interface before
+392. Test DSRevokeBuffer with closed device before
+393. Test DSRevokeBuffer with closed datastream before
+394. Test DSRevokeBuffer with datastream handle = GENTL_INVALID_HANDLE
+395. Test DSRevokeBuffer with parameter private data (precondition DSAllocAndAnnounceBuffer)
+396. Test DSRevokeBuffer with parameter buffer pointer (precondition DSAllocAndAnnounceBuffer)
+397. Test DSRevokeBuffer with parameter hBuffer = GENTL_INVALID_HANDLE
+
+**********************************************************************
+==> Running DataStream_DSGetBufferChunkData:
+398. Test DSGetBufferChunkData with closed library before
+399. Test DSGetBufferChunkData with closed system before
+400. Test DSGetBufferChunkData with closed interface before
+401. Test DSGetBufferChunkData with closed device before
+402. Test DSGetBufferChunkData with closed datastream before
+403. Test DSGetBufferChunkData with parameter piNumChunks = NULL
+404. Test DSGetBufferChunkData with datastream handle = NULL
+
+**********************************************************************
+==> Running DataStream_DSGetParentDev:
+405. Test standard DSGetParentDev
+406. Test DSGetParentDev with closed library before
+407. Test DSGetParentDev with closed system before
+408. Test DSGetParentDev with closed interface before
+409. Test DSGetParentDev with closed device before
+410. Test DSGetParentDev with closed datastream before
+411. Test DSGetParentDev with datastream handle = GENTL_INVALID_HANDLE
+412. Test DSGetParentDev with pointer hDev = NULL
+
+**********************************************************************
+==> Running Signaling_GCRegisterEvent:
+413. Test standard GCRegisterEvent (System)
+414. Test standard GCRegisterEvent (Interface)
+415. Test standard GCRegisterEvent (Device)
+416. Test standard GCRegisterEvent (DataStream)
+417. Test GCRegisterEvent with closed library before
+418. Test GCRegisterEvent with closed system before
+419. Test GCRegisterEvent with closed interface before
+420. Test GCRegisterEvent with closed device before
+421. Test GCRegisterEvent with closed datastream before
+422. Test GCRegisterEvent with datastream handle = GENTL_INVALID_HANDLE
+423. Test GCRegisterEvent with parameter iEventID = EVENT_MODULE+1
+424. Test GCRegisterEvent with parameter phEvent = NULL
+425. Test GCRegisterEvent one event twice in one module.
+
+**********************************************************************
+==> Running Signaling_GCUnregisterEvent:
+426. Test standard GCUnregisterEvent (System)
+427. Test standard GCUnregisterEvent (Interface)
+428. Test standard GCUnregisterEvent (Device)
+429. Test standard GCUnregisterEvent (DataStream)
+430. Test GCUnregisterEvent with closed library before
+431. Test GCUnregisterEvent with closed system before
+432. Test GCUnregisterEvent with closed interface before
+433. Test GCUnregisterEvent with closed device before
+434. Test GCUnregisterEvent with closed datastream before
+435. Test GCUnregisterEvent with datastream handle = GENTL_INVALID_HANDLE
+436. Test GCUnregisterEvent with parameter iEventID = EVENT_MODULE+1
+
+**********************************************************************
+==> Running Signaling_TLParamsLocked:
+437. Test standard remote device feature 'TLParamsLocked'
+
+**********************************************************************
+==> Running Signaling_StartDevice:
+438. Test standard start the acquisition inside the remote device
+
+**********************************************************************
+==> Running Signaling_StopDevice:
+439. Test standard stop the acquisition inside the remote device
+
+**********************************************************************
+==> Running Signaling_EventGetInfo:
+440. Test standard EventGetInfo
+441. Test EventGetInfo with closed library before
+442. Test EventGetInfo with closed system before
+443. Test EventGetInfo with closed interface before
+444. Test EventGetInfo with closed device before
+445. Test EventGetInfo with closed datastream before
+446. Test EventGetInfo with unregistered event before
+447. Test EventGetInfo with event handle = GENTL_INVALID_HANDLE
+448. Test EventGetInfo with parameter iInfoCmd = EVENT_INFO_DATA_SIZE_MAX+1
+449. Test EventGetInfo with parameter piType = NULL at second call with initialized buffer
+450. Test EventGetInfo with parameter piSize = NULL
+451. Test EventGetInfo with parameter iSize = 0 at second call with initialized buffer
+452. Test EventGetInfo with parameter piSize = NULL at second call with initialized buffer
+
+**********************************************************************
+==> Running Signaling_EventGetData:
+453. Test standard EventGetData (using DSAnnounceBuffer)
+454. Test standard EventGetData (using DSAllocAndAnnounceBuffer)
+455. Test EventGetData with closed library before
+456. Test EventGetData with closed system before
+457. Test EventGetData with closed interface before
+458. Test EventGetData with closed device before
+459. Test EventGetData with closed datastream before
+460. Test EventGetData with unregistered event before
+461. Test EventGetData with event handle = GENTL_INVALID_HANDLE
+462. Test EventGetData with parameter pBuffer = NULL
+463. Test EventGetData with parameter buffer piSize = NULL
+464. Test EventGetData with parameter iSize = iSize - 1
+465. Test EventGetData with parameter iTimeout = 0
+
+**********************************************************************
+==> Running Signaling_EventGetDataInfo:
+466. Test standard EventGetDataInfo
+467. Test EventGetDataInfo with closed library before
+468. Test EventGetDataInfo with closed system before
+469. Test EventGetDataInfo with closed interface before
+470. Test EventGetDataInfo with closed device before
+471. Test EventGetDataInfo with closed datastream before
+472. Test EventGetDataInfo with unregistered event before
+473. Test EventGetDataInfo with event handle = GENTL_INVALID_HANDLE
+474. Test EventGetDataInfo with parameter iInfoCmd = EVENT_DATA_NUMID+1
+475. Test EventGetDataInfo with parameter piType = NULL at second call with initialized buffer
+476. Test EventGetDataInfo with parameter piSize = NULL
+477. Test EventGetDataInfo with parameter iSize = 0 at second call with initialized buffer
+478. Test EventGetDataInfo with parameter piSize = NULL at second call with initialized buffer
+479. Test EventGetDataInfo with parameter pInBuffer = NULL
+480. Test EventGetDataInfo with parameter iInSize = 0
+481. Test EventGetDataInfo with parameter iInSize = iInSize-1
+
+**********************************************************************
+==> Running Signaling_EventKill:
+482. Test EventKill with closed library before
+483. Test EventKill with closed system before
+484. Test EventKill with closed interface before
+485. Test EventKill with closed device before
+486. Test EventKill with closed datastream before
+487. Test EventKill with unregistered event before
+488. Test EventKill with event handle = GENTL_INVALID_HANDLE
+
+**********************************************************************
+==> Running Signaling_EventFlush:
+489. Test standard EventFlush
+490. Test EventFlush with closed library before
+491. Test EventFlush with closed system before
+492. Test EventFlush with closed interface before
+493. Test EventFlush with closed device before
+494. Test EventFlush with closed datastream before
+495. Test EventFlush with unregistered event before
+496. Test EventFlush with event handle = GENTL_INVALID_HANDLE
+
+**********************************************************************
+==> Running Impl_Test:
+497. Test standard acquisition with registered event EVENT_NEW_BUFFER (using DSAnnounceBuffer)
+498. Test standard acquisition with registered event EVENT_NEW_BUFFER for correct event amount of 10 (using DSAnnounceBuffer)
+499. Test standard acquisition with registered event EVENT_NEW_BUFFER (using DSAnnounceBuffer and DSGetInfo)
+500. Test standard acquisition with registered event EVENT_NEW_BUFFER (using DSAllocAndAnnounceBuffer)
+501. Test while receiving event EVENT_NEW_BUFFER if DSGetBufferInfo BUFFER_INFO_NEW_DATA returns true (using DSAllocAndAnnounceBuffer)
+502. Test GCGetPortInfo check Portnames (see section 4.1.1)
+503. Test buffer pool lock during running aquisition (see section 5.1.1 and 5.2.2)
+
+**********************************************************************
+==> Running Impl_Test2:
+504. Test acquisition with registered event EVENT_NEW_BUFFER and get buffer chunk data (using DSAnnounceBuffer)
+505. Test acquisition with registered event EVENT_NEW_BUFFER and get buffer chunk data (using DSAllocAndAnnounceBuffer)

@@ -1,0 +1,16 @@
+EXPORTS
+
+pcGetDLLFileVersion         @10
+vCreateTestEnumeration		@20
+vSetTLFile                  @30
+vSetDLLSpecialTestCaseRange @40
+vSetDLLTestTimeout			@45
+vSetDLLTestDatastream       @50
+vSetDLLTestChunkData		@60
+vSetDLLReusePayloadsize		@70
+vSetDLLCTIInterfaceLog      @80
+vSetDLLCallback             @90
+vSetDLLOutputDirectory      @100
+vStopTLTest                 @110
+vRunTLTest                  @120
+
