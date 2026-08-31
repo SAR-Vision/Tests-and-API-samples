@@ -35,7 +35,6 @@ def CaseArgumentParser():
     return parser
 
 
-
 # Common KAYA fragment_03
 # Grabber initialization for this specific test
 def Reset_grabber(grabberHandle):
@@ -208,7 +207,6 @@ def Reset_camera(cameraHandle, grabberHandle):     # Camera initialization for t
 # END OF Common KAYA fragment_03
 
 
-
 def ParseArgs():
     parser = CaseArgumentParser()
     args = parser.parse_args()
@@ -289,6 +287,7 @@ def CaseRun(args):
 # The flow starts here
 if __name__ == "__main__":
     try:
+        print("case Process ID:", os.getpid())
         args_ = ParseArgs()
         return_code = CaseRun(args_)
         print(f'Case return code: {return_code}')
