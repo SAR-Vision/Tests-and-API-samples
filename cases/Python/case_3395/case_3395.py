@@ -36,7 +36,6 @@ def CaseArgumentParser():
     return parser
 
 
-
 # Common KAYA fragment_03
 # Grabber initialization for this specific test
 def Reset_grabber(grabberHandle):
@@ -64,7 +63,6 @@ def Reset_grabber(grabberHandle):
 
 
 def Reset_camera(cameraHandle, grabberHandle):     # Camera initialization for this specific test
-
     # 1. open json file with camera descriptions
     # 2. find this particular camera description
     # 3. from camera description take its "reset_camera_sequence" and "reset_grabber_sequence"
@@ -209,7 +207,6 @@ def Reset_camera(cameraHandle, grabberHandle):     # Camera initialization for t
 # END OF Common KAYA fragment_03
 
 
-
 def ParseArgs():
     parser = CaseArgumentParser()
     args = parser.parse_args()
@@ -260,11 +257,12 @@ def camera_param_setter(cameraHandle):
     KYFG_SetCameraValueFloat(cameraHandle, "ExposureTime", 5000.0)
 
 
-def grabberCameraSetter(grabberHandle,cameraIndex):
+def grabberCameraSetter(grabberHandle, cameraIndex):
     (status,) = KYFG_SetGrabberValueInt(int(grabberHandle), 'CameraSelector', cameraIndex)
     (status,) = KYFG_SetGrabberValueEnum(grabberHandle, "CameraTriggerMode", 1)
     (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, 'CameraTriggerActivation', "AnyEdge")
     (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, 'CameraTriggerSource', "KY_TTL_0")
+
 
 def useLikeTriggerGenerator(masterGrabber, ExpectedFPS):
     (status,) = KYFG_SetGrabberValueEnum_ByValueName(masterGrabber, 'LineSelector', "KY_TTL_0")
@@ -275,6 +273,7 @@ def useLikeTriggerGenerator(masterGrabber, ExpectedFPS):
     (status,) = KYFG_SetGrabberValueFloat(int(masterGrabber), 'TimerDelay', FrameTime/2)
     (status,) = KYFG_SetGrabberValueFloat(int(masterGrabber), 'TimerDuration', FrameTime/2)
     (status,) = KYFG_SetGrabberValueEnum(masterGrabber, "TimerTriggerSource", 0)
+
 
 def useLikeTriggerListener(masterGrabber):
     (status,) = KYFG_SetGrabberValueEnum_ByValueName(masterGrabber, 'LineSelector', "KY_TTL_0")
@@ -349,9 +348,9 @@ def CaseRun(args):
     for cameraHandle in grabber1CameraList:
         (status,) = KYFG_CameraOpen2(cameraHandle, None)
 
-##############################################
-        Reset_camera(cameraHandle)
-##############################################
+        #########################################
+        Reset_camera(cameraHandle, grabberHandle)
+        #########################################
                
         (status, camInfo) = KYFG_CameraInfo2(cameraHandle)
         print(f'Camera {camInfo.deviceModelName} opened on first grabber')
@@ -362,9 +361,9 @@ def CaseRun(args):
     for cameraHandle in grabber2CameraList:
         (status,) = KYFG_CameraOpen2(cameraHandle, None)
 
-##############################################
-        Reset_camera(cameraHandle)
-##############################################
+        #########################################
+        Reset_camera(cameraHandle, grabberHandle)
+        #########################################
                
         (status, camInfo) = KYFG_CameraInfo2(cameraHandle)
         print(f'Camera {camInfo.deviceModelName} opened on second grabber')
@@ -485,6 +484,7 @@ def CaseRun(args):
 # The flow starts here
 if __name__ == "__main__":
     try:
+        print("case Process ID:", os.getpid())
         args_ = ParseArgs()
         return_code = CaseRun(args_)
         print(f'Case return code: {return_code}')
