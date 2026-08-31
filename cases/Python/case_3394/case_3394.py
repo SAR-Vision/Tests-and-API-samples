@@ -36,7 +36,6 @@ def CaseArgumentParser():
     return parser
 
 
-
 # Common KAYA fragment_03
 # Grabber initialization for this specific test
 def Reset_grabber(grabberHandle):
@@ -64,7 +63,6 @@ def Reset_grabber(grabberHandle):
 
 
 def Reset_camera(cameraHandle, grabberHandle):     # Camera initialization for this specific test
-
     # 1. open json file with camera descriptions
     # 2. find this particular camera description
     # 3. from camera description take its "reset_camera_sequence" and "reset_grabber_sequence"
@@ -209,7 +207,6 @@ def Reset_camera(cameraHandle, grabberHandle):     # Camera initialization for t
 # END OF Common KAYA fragment_03
 
 
-
 def ParseArgs():
     parser = CaseArgumentParser()
     args = parser.parse_args()
@@ -219,7 +216,7 @@ def ParseArgs():
 ##########
 # Classes
 ##########
-class StreamCallbackStruct():
+class StreamCallbackStruct:
     def __init__(self):
         self.callbackCounter = 0
         self.timestamps = []
@@ -329,8 +326,17 @@ def CaseRun(args):
     slaveDeviceIndex = args['slaveDeviceIndex']
     streamDuration = args['streamDuration']
     expectedFPS = args['expectedFPS']
+
     (masterGrabber,) = KYFG_Open(device_index)
+    ############################
+    Reset_grabber(masterGrabber)
+    ############################
+
     (slaveGrabber,) = KYFG_Open(slaveDeviceIndex)
+    ############################
+    Reset_grabber(slaveGrabber)
+    ############################
+
     (status, masterCameraList) = KYFG_UpdateCameraList(masterGrabber)
     (status, slaveCameraList) = KYFG_UpdateCameraList(slaveGrabber)
     assert len(masterCameraList) > 0 and len(slaveCameraList) > 0, 'No cameras'
@@ -341,9 +347,9 @@ def CaseRun(args):
         (status,) = KYFG_CameraOpen2(cameraHandle, None)
         (status, camInfo) = KYFG_CameraInfo2(cameraHandle)
 
-##############################################
-        Reset_camera(cameraHandle)
-##############################################
+        #########################################
+        Reset_camera(cameraHandle, masterGrabber)
+        #########################################
 
         print(f'Camera {camInfo.deviceModelName} opened on master grabber')
         camera_param_setter(cameraHandle)
@@ -355,9 +361,9 @@ def CaseRun(args):
         (status, camInfo) = KYFG_CameraInfo2(cameraHandle)
         (status,) = KYFG_CameraOpen2(cameraHandle, None)
 
-##############################################
-        Reset_camera(cameraHandle)
-##############################################
+        #########################################
+        Reset_camera(cameraHandle, slaveGrabber)
+        #########################################
 
         print(f'Camera {camInfo.deviceModelName} opened on slave grabber')
         camera_param_setter(cameraHandle)
@@ -367,6 +373,7 @@ def CaseRun(args):
     masterStreamHandleArray = []
     slaveStreamHandleArray = []
     error_count = 0
+
     # Master grabber stream prep
     for cameraHandle in masterCameraList:
         (status, camInfo) = KYFG_CameraInfo2(cameraHandle)
@@ -376,18 +383,20 @@ def CaseRun(args):
         masterCallbackStructList.append(streamCallbackStruct)
         (status,) = KYFG_StreamBufferCallbackRegister(streamHandle, streamCallbackFunc, py_object(streamCallbackStruct))
         (_, payload_size, _, _) = KYFG_StreamGetInfo(streamHandle, KY_STREAM_INFO_CMD.KY_STREAM_INFO_PAYLOAD_SIZE)
-        (_, buf_allignment, _, _) = KYFG_StreamGetInfo(streamHandle, KY_STREAM_INFO_CMD.KY_STREAM_INFO_BUF_ALIGNMENT)
+        (_, buf_alignment, _, _) = KYFG_StreamGetInfo(streamHandle, KY_STREAM_INFO_CMD.KY_STREAM_INFO_BUF_ALIGNMENT)
         streamBufferHandle = [0 for i in range(16)]
-        streamAllignedBuffer = [0 for i in range(16)]
+        streamAlignmentBuffer = [0 for i in range(16)]
+
         for iFrame in range(len(streamBufferHandle)):
-            streamAllignedBuffer[iFrame] = aligned_array(buf_allignment, c_ubyte, payload_size)
-            (status, streamBufferHandle[iFrame]) = KYFG_BufferAnnounce(streamHandle, streamAllignedBuffer[iFrame], None)
+            streamAlignmentBuffer[iFrame] = alignment_array(buf_alignment, c_ubyte, payload_size)
+            (status, streamBufferHandle[iFrame]) = KYFG_BufferAnnounce(streamHandle, streamAlignmentBuffer[iFrame], None)
         print(f'GrabberHandle: {masterGrabber}; CameraHandle: {hex(cameraHandle)}; streamHandle: {streamHandle}')
-        print('Stram preparation completed')
+        print('Stream preparation completed')
         (status,) = KYFG_BufferQueueAll(streamHandle, KY_ACQ_QUEUE_TYPE.KY_ACQ_QUEUE_UNQUEUED,
                                         KY_ACQ_QUEUE_TYPE.KY_ACQ_QUEUE_INPUT)
         (status,) = KYFG_CameraStart(cameraHandle, streamHandle, 0)
         print(f"Camera {camInfo.deviceModelName} stream started")
+
     # Slave grabber stream prep
     for cameraHandle in slaveCameraList:
         (status, camInfo) = KYFG_CameraInfo2(cameraHandle)
@@ -397,18 +406,19 @@ def CaseRun(args):
         slaveCallbackStructList.append(streamCallbackStruct)
         (status,) = KYFG_StreamBufferCallbackRegister(streamHandle, streamCallbackFunc, py_object(streamCallbackStruct))
         (_, payload_size, _, _) = KYFG_StreamGetInfo(streamHandle, KY_STREAM_INFO_CMD.KY_STREAM_INFO_PAYLOAD_SIZE)
-        (_, buf_allignment, _, _) = KYFG_StreamGetInfo(streamHandle, KY_STREAM_INFO_CMD.KY_STREAM_INFO_BUF_ALIGNMENT)
+        (_, buf_alignment, _, _) = KYFG_StreamGetInfo(streamHandle, KY_STREAM_INFO_CMD.KY_STREAM_INFO_BUF_ALIGNMENT)
         streamBufferHandle = [0 for i in range(16)]
-        streamAllignedBuffer = [0 for i in range(16)]
+        streamAlignmentBuffer = [0 for i in range(16)]
         for iFrame in range(len(streamBufferHandle)):
-            streamAllignedBuffer[iFrame] = aligned_array(buf_allignment, c_ubyte, payload_size)
-            (status, streamBufferHandle[iFrame]) = KYFG_BufferAnnounce(streamHandle, streamAllignedBuffer[iFrame], None)
+            streamAlignmentBuffer[iFrame] = alignment_array(buf_alignment, c_ubyte, payload_size)
+            (status, streamBufferHandle[iFrame]) = KYFG_BufferAnnounce(streamHandle, streamAlignmentBuffer[iFrame], None)
         (status,) = KYFG_BufferQueueAll(streamHandle, KY_ACQ_QUEUE_TYPE.KY_ACQ_QUEUE_UNQUEUED,
                                         KY_ACQ_QUEUE_TYPE.KY_ACQ_QUEUE_INPUT)
         print(f'GrabberHandle: {slaveGrabber}; CameraHandle: {hex(cameraHandle)}; streamHandle: {streamHandle}')
-        print('Stram preparation completed')
+        print('Stream preparation completed')
         (status,) = KYFG_CameraStart(cameraHandle, streamHandle, 0)
         print(f"Camera {camInfo.deviceModelName} stream started")
+
     (status,) = KYFG_SetGrabberValueEnum_ByValueName(masterGrabber, 'TimerSelector', "Timer0")
     (status,) = KYFG_SetGrabberValueEnum(masterGrabber, "TimerTriggerSource", 42)  # Continuous
     time.sleep(streamDuration)
@@ -417,6 +427,7 @@ def CaseRun(args):
     print('slaveCallbackStructList', slaveCallbackStructList)
     print('masterStreamHandleArray', masterStreamHandleArray)
     print('slaveStreamHandleArray,', slaveStreamHandleArray)
+
     for cameraHandle in masterCameraList:
         print('cameraHandle', cameraHandle)
         streamHandle = masterStreamHandleArray[masterCameraList.index(cameraHandle)]
@@ -437,8 +448,8 @@ def CaseRun(args):
         if drop_frame_counter > 0 or frame_counter == 0 or streamCallbackStruct.callbackCounter == 0:
             print("Camera test not Passed")
             error_count += 1
-
         KYFG_SetGrabberValueEnum(masterGrabber, "CameraTriggerMode", 0)
+
     for cameraHandle in slaveCameraList:
         print('cameraHandle', cameraHandle)
         streamHandle = slaveStreamHandleArray[slaveCameraList.index(cameraHandle)]
@@ -460,8 +471,8 @@ def CaseRun(args):
                 or abs(frame_counter - (expectedFPS*streamDuration) > 1):
             print("Camera test not Passed")
             error_count += 1
-
         KYFG_SetGrabberValueEnum(slaveGrabber, "CameraTriggerMode", 0)
+
     (status,) = KYFG_Close(int(masterGrabber))
     (status,) = KYFG_Close(int(slaveGrabber))
     assert error_count == 0
@@ -472,6 +483,7 @@ def CaseRun(args):
 # The flow starts here
 if __name__ == "__main__":
     try:
+        print("case Process ID:", os.getpid())
         args_ = ParseArgs()
         return_code = CaseRun(args_)
         print(f'Case return code: {return_code}')
