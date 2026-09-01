@@ -260,10 +260,6 @@ def CaseRun(args):
     (grabberHandle,) = KYFG_Open(device_index)
     (status, device_info) = KY_DeviceInfo(device_index)
 
-    if device_info.m_Protocol != KY_DEVICE_PROTOCOL.KY_DEVICE_PROTOCOL_CLHS:
-        print('Test could not run on this grabber')
-        return CaseReturnCode.COULD_NOT_RUN
-
     ############################
     Reset_grabber(grabberHandle)
     ############################
