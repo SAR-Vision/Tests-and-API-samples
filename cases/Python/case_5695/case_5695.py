@@ -34,7 +34,7 @@ def CaseArgumentParser():
                         help='Index of PCI device to use, '
                              'run this script with "--deviceList" to see available devices and exit')
     # Other arguments needed for this specific case, PARSE CASE SPECIFIC ARGUMENTS UNDER THIS LINE:
-    parser.add_argument('--number_of_sent_tests', type=int, default=0, help='Number of sent triggers')
+    parser.add_argument('--number_of_sent_tests', type=int, default=3, help='Number of sent triggers')
     return parser
 
 
@@ -218,6 +218,7 @@ def findPoCXPLik(grabberHandle):
         (status, result) = KYFG_GetGrabberValueEnum(grabberHandle, f"PoCXP{i}")
         if result:
             return i
+    return None
 
 
 def ParseArgs():
@@ -236,7 +237,6 @@ def callbackFunc(buffHandle, userContext):
     buf = buf_type.from_address(base)
 
     arr = np.frombuffer(buf, dtype=np.uint16)
-    # print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
     arr = arr.reshape((userContext.height, userContext.width))
     if not np.array_equal(arr, userContext.testPatternBuffer):
 
@@ -440,10 +440,9 @@ def CaseRun(args):
         (status, frameCount) = KYFG_GetGrabberValueInt(grabberHandle, "RXFrameCounter")
         (status, dropFrameCounter) = KYFG_GetGrabberValueInt(grabberHandle, "DropFrameCounter")
 
-
         KYFG_StreamDelete(streamHandle)
         KYFG_CameraClose(cameraHandle)
-        print(f"Test statistic: frame counter {frameCount} Drop frames: {dropFrameCounter} callbacks {streamCallbackStruct.frameCounter}")
+        print(f"\nTest statistic: frame counter {frameCount} Drop frames: {dropFrameCounter} callbacks {streamCallbackStruct.frameCounter}")
         assert (frameCount != 0 and dropFrameCounter == 0), f"TEST NUMBER {i+1} IS FAILED"
         assert streamCallbackStruct.testResult, f"TEST NUMBER {i + 1} IS FAILED"
         print(f"TEST NUMBER {i+1} IS PASSED")
