@@ -2,6 +2,8 @@
 import sys
 import os
 import argparse
+from ctypes import py_object
+
 os.environ["WithAdapter"] = "1"
 sys.path.insert(0, os.environ['KAYA_VISION_POINT_PYTHON_PATH'])
 from KYFGLib import *
@@ -229,8 +231,6 @@ def Stream_callback_func(buffHandle, userContext):
     Stream_callback_func.copyingDataFlag = 0
     return
 
-################################################
-
 
 def FindResolutionStep(camera_handle, min_value, param):
     step_list = [1, 2, 4, 8, 16, 32]
@@ -301,150 +301,127 @@ def CaseRun(args):
     streamInfoStruct = StreamInfoStruct()
     streamBufferHandle = [0 for i in range(16)]
     streamAllignedBuffer = [0 for i in range(16)]
+
     # OPEN device
     (grabberHandle,) = KYFG_Open(device_index)
+    (status, device_info) = KY_DeviceInfo(device_index) ##################################################
 
     ############################
     Reset_grabber(grabberHandle)
     ############################
 
-    device_info = device_infos[device_index]
-    print(
-        f'Opened device [{device_index}]: (PCI {device_info.nBus}:{device_info.nSlot}:{device_info.nFunction})"{device_info.szDeviceDisplayName}"')
-    # scan and open camera
-    (status, camHandleArray_col) = KYFG_UpdateCameraList(grabberHandle)
-    camIndex = 0
+    print("-----------------------------------------------------------")
+    print(f"Selected grabber: [{device_index}] {device_info.szDeviceDisplayName}, FGHANDLE: {str(grabberHandle)}")
+    print("-----------------------------------------------------------\n")
 
-    print(f'Camera scan result:\nStatus: {status}\nCamHandleArray: {camHandleArray_col}')
-    if len(camHandleArray_col) == 0:
-        print('There is no cameras on this device')
+    (status, camera_list) = KYFG_UpdateCameraList(grabberHandle)
+
+    if len(camera_list) == 0:
+        print("-----------------------------------------------------------")
+        print('There is no cameras on this grabber')
+        print("-----------------------------------------------------------\n")
         return CaseReturnCode.NO_HW_FOUND
+
+    assertionFailed = False
+    cameraIndex = 0
     error_count = 0
 
-    camHandle = None
+    for cameraHandle in camera_list:
+        (status, camera_info) = KYFG_CameraInfo2(cameraHandle)
+        (status,) = KYFG_CameraOpen2(cameraHandle, None)
 
-    for cameraHandle in camHandleArray_col:
-        (status, camInfo) = KYFG_CameraInfo2(cameraHandle)
+        KYFG_SetGrabberValueInt(grabberHandle, "CameraSelector", cameraIndex)
+        #########################################
+        Reset_camera(cameraHandle, grabberHandle)
+        #########################################
 
-        if camera_model == "Any":
-            print(f'Camera {camInfo.deviceModelName} Found on grabber')
-            camHandle = cameraHandle
-            break
+        cameraIndex = camera_list.index(cameraHandle)
 
-        if camInfo.deviceModelName == camera_model:
-            print(f'Camera {camInfo.deviceModelName} Found on grabber')
-            camHandle = cameraHandle
-            break
+        print("-----------------------------------------------------------")
+        print(f"Selected camera: [{cameraIndex}] {camera_info.deviceModelName}, CAMHANDLE: {hex(cameraHandle)}")
+        print("-----------------------------------------------------------\n")
 
-    if camHandle is None:
-        print(f"Camera {camera_model} is not found on this grabber")
-        return CaseReturnCode.NO_HW_FOUND
+        (status, max_width) = KYFG_GetCameraValueInt(cameraHandle, "WidthMax")
+        (status, max_height) = KYFG_GetCameraValueInt(cameraHandle, "HeightMax")
+        (status, min_width) = KYFG_GetCameraValueInt(cameraHandle, 'WidthMin')
+        (status, min_height) = KYFG_GetCameraValueInt(cameraHandle, 'HeightMin')
+        (status, max_width, min_width) = KYFG_GetCameraValueIntMaxMin(cameraHandle, "Width")
+        (status, max_height, min_height) = KYFG_GetCameraValueIntMaxMin(cameraHandle, "Height")
 
-    (status,) = KYFG_CameraOpen2(camHandle, None)
-    (status, camInfo) = KYFG_CameraInfo2(camHandle)
+        width_step = FindResolutionStep(cameraHandle, min_width, "Width")
+        height_step = FindResolutionStep(cameraHandle, min_height, "Height")
+        for i in range(0, 5):
+            width = int((int((max_width - min_width) / 4) * i) / width_step) * width_step + min_width
+            height = int((int((max_height - min_height) / 4) * i) / height_step) * height_step + min_height
+            streamInfoStruct.width = width
+            streamInfoStruct.height = height
+            try:
+                (status,) = KYFG_SetCameraValueInt(cameraHandle, "Width", width)
+                (status,) = KYFG_SetCameraValueInt(cameraHandle, "Height", height)
+            except:
+                print(f"Camera resolution {width}x{height} is invalid")
+                continue
+            print()
+            print(f"Camera resolution is {width}x{height}")
+            # stream register
+            (KYFG_StreamCreate_status, cameraStreamHandle) = KYFG_StreamCreate(cameraHandle, 0)
+            (KYFG_StreamBufferCallbackRegister_status,) = KYFG_StreamBufferCallbackRegister(cameraStreamHandle,
+                                                                                            Stream_callback_func,
+                                                                                            py_object(streamInfoStruct))
+            # stream info
+            (KYFG_StreamGetInfo_status, payload_size, frameDataSize, pInfoType) = \
+                KYFG_StreamGetInfo(cameraStreamHandle, KY_STREAM_INFO_CMD.KY_STREAM_INFO_PAYLOAD_SIZE)
 
-    KYFG_SetGrabberValueInt(grabberHandle, "CameraSelector", camIndex)
-##########################################
-    Reset_camera(camHandle, grabberHandle)
-##########################################
+            (KYFG_StreamGetInfo_status, buf_allignment, frameDataAligment, pInfoType) = \
+                KYFG_StreamGetInfo(cameraStreamHandle, KY_STREAM_INFO_CMD.KY_STREAM_INFO_BUF_ALIGNMENT)
+            for iFrame in range(len(streamBufferHandle)):
+                # streamAllignedBuffer[iFrame] = aligned_array(buf_allignment, c_ubyte, payload_size)
+                (status, streamBufferHandle[iFrame]) = KYFG_BufferAllocAndAnnounce(cameraStreamHandle, payload_size, None)
+            for iFrame in range(len(streamBufferHandle)):
+                # (status, FPS) = KYFG_GetCameraValue(camera_handle, "AcquisitionFrameRate")
+                # The low frame rate select for DropFrames check
+                FPS = 4.0
+                (status,) = KYFG_SetCameraValueFloat(cameraHandle, "AcquisitionFrameRate", FPS)
 
-    # Set camera selector to current camera index
-    (status,) = KYFG_SetGrabberValueInt(grabberHandle, "CameraSelector", camHandleArray_col.index(camHandle))
+                (KYFG_BufferQueueAll_status,) = KYFG_BufferQueueAll(cameraStreamHandle, KY_ACQ_QUEUE_TYPE.KY_ACQ_QUEUE_UNQUEUED,
+                                                                    KY_ACQ_QUEUE_TYPE.KY_ACQ_QUEUE_INPUT)
+                (KYFG_CameraStart_status,) = KYFG_CameraStart(cameraHandle, cameraStreamHandle, 0)
+                time_s = int(iFrame / FPS + 1)
+                time.sleep(time_s + 1)
+                (CameraStop_status,) = KYFG_CameraStop(cameraHandle)
 
-    # check trigger mode
-    try:
-        if KYFG_IsGrabberValueImplemented(grabberHandle, 'TriggerMode'):
-            KYFG_SetGrabberValueEnum(grabberHandle, "TriggerMode", 0)
-        if KYFG_IsCameraValueImplemented(camHandle, "TriggerMode"):
-            KYFG_SetCameraValueEnum(camHandle, "TriggerMode", 0)
-        if KYFG_IsCameraValueImplemented(camHandle, "SimulationTriggerMode"):
-            KYFG_SetCameraValueEnum(camHandle, "SimulationTriggerMode", 0)
-    except:
-        pass
+                # Ensure acquiring started and frames were acquired
+                (status_rxf, fg_stat_rxf) = KYFG_GetGrabberValue(grabberHandle, "RXFrameCounter")
+                (status_rxp, fg_stat_rxp) = KYFG_GetGrabberValue(grabberHandle, "RXPacketCounter")
+                if fg_stat_rxp <= 0 or fg_stat_rxf <= 0:
+                    error_count += 1
+                if fg_stat_rxp < fg_stat_rxf:
+                    print("RXFrameCounter < RXPacketCounter")
+                    error_count += 1
+                (status, crc_errors) = KYFG_GetGrabberValue(cameraHandle, "CRCErrorCounter")
+                if KYFG_IsGrabberValueImplemented(cameraHandle, 'DropPacketCounter'):
+                    (status, dropped_packets) = KYFG_GetGrabberValue(cameraHandle, "DropPacketCounter")
+                    print("dropped packets: ", dropped_packets)
+                (status, dropped_frames) = KYFG_GetGrabberValue(cameraHandle, "DropFrameCounter")
 
-    KYFG_SetCameraValueInt(camHandle, "Width", 1024)
-    KYFG_SetCameraValueInt(camHandle, "Height", 960)
-    (status, max_width) = KYFG_GetCameraValueInt(camHandle, "WidthMax")
-    (status, max_height) = KYFG_GetCameraValueInt(camHandle, "HeightMax")
-    (status, min_width) = KYFG_GetCameraValueInt(camHandle, 'WidthMin')
-    (status, min_height) = KYFG_GetCameraValueInt(camHandle, 'HeightMin')
-    (status, max_width, min_width) = KYFG_GetCameraValueIntMaxMin(camHandle, "Width")
-    (status, max_height, min_height) = KYFG_GetCameraValueIntMaxMin(camHandle, "Height")
-
-    width_step = FindResolutionStep(camHandle, min_width, "Width")
-    height_step = FindResolutionStep(camHandle, min_height, "Height")
-    for i in range(0, 5):
-        width = int((int((max_width - min_width) / 4) * i) / width_step) * width_step + min_width
-        height = int((int((max_height - min_height) / 4) * i) / height_step) * height_step + min_height
-        streamInfoStruct.width = width
-        streamInfoStruct.height = height
-        try:
-            (status,) = KYFG_SetCameraValueInt(camHandle, "Width", width)
-            (status,) = KYFG_SetCameraValueInt(camHandle, "Height", height)
-        except:
-            print(f"Camera resolution {width}x{height} is invalid")
-            continue
-        print()
-        print(f"Camera resolution is {width}x{height}")
-        # stream register
-        (KYFG_StreamCreate_status, cameraStreamHandle) = KYFG_StreamCreate(camHandle, 0)
-        (KYFG_StreamBufferCallbackRegister_status,) = KYFG_StreamBufferCallbackRegister(cameraStreamHandle,
-                                                                                        Stream_callback_func,
-                                                                                        py_object(streamInfoStruct))
-        # stream info
-        (KYFG_StreamGetInfo_status, payload_size, frameDataSize, pInfoType) = \
-            KYFG_StreamGetInfo(cameraStreamHandle, KY_STREAM_INFO_CMD.KY_STREAM_INFO_PAYLOAD_SIZE)
-
-        (KYFG_StreamGetInfo_status, buf_allignment, frameDataAligment, pInfoType) = \
-            KYFG_StreamGetInfo(cameraStreamHandle, KY_STREAM_INFO_CMD.KY_STREAM_INFO_BUF_ALIGNMENT)
-        for iFrame in range(len(streamBufferHandle)):
-            # streamAllignedBuffer[iFrame] = aligned_array(buf_allignment, c_ubyte, payload_size)
-            (status, streamBufferHandle[iFrame]) = KYFG_BufferAllocAndAnnounce(cameraStreamHandle, payload_size, None)
-        for iFrame in range(len(streamBufferHandle)):
-            # (status, FPS) = KYFG_GetCameraValue(camera_handle, "AcquisitionFrameRate")
-            # The low frame rate select for DropFrames check
-            FPS = 4.0
-            (status,) = KYFG_SetCameraValueFloat(camHandle, "AcquisitionFrameRate", FPS)
-
-            (KYFG_BufferQueueAll_status,) = KYFG_BufferQueueAll(cameraStreamHandle, KY_ACQ_QUEUE_TYPE.KY_ACQ_QUEUE_UNQUEUED,
-                                                                KY_ACQ_QUEUE_TYPE.KY_ACQ_QUEUE_INPUT)
-            (KYFG_CameraStart_status,) = KYFG_CameraStart(camHandle, cameraStreamHandle, 0)
-            time_s = int(iFrame / FPS + 1)
-            time.sleep(time_s + 1)
-            (CameraStop_status,) = KYFG_CameraStop(camHandle)
-
-            # Ensure acquiring started and frames were acquired
-            (status_rxf, fg_stat_rxf) = KYFG_GetGrabberValue(grabberHandle, "RXFrameCounter")
-            (status_rxp, fg_stat_rxp) = KYFG_GetGrabberValue(grabberHandle, "RXPacketCounter")
-            if fg_stat_rxp <= 0 or fg_stat_rxf <= 0:
-                error_count += 1
-            if fg_stat_rxp < fg_stat_rxf:
-                print("RXFrameCounter < RXPacketCounter")
-                error_count += 1
-            (status, crc_errors) = KYFG_GetGrabberValue(camHandle, "CRCErrorCounter")
-            if KYFG_IsGrabberValueImplemented(camHandle, 'DropPacketCounter'):
-                (status, dropped_packets) = KYFG_GetGrabberValue(camHandle, "DropPacketCounter")
-                print("dropped packets: ", dropped_packets)
-            (status, dropped_frames) = KYFG_GetGrabberValue(camHandle, "DropFrameCounter")
-
-            print(f'CRCErrorCounter: {crc_errors}', f'DropFrameCounter: {dropped_frames}')
-            print(f'RXFrameCounter: {fg_stat_rxf}', f'RXPacketCounter: {fg_stat_rxp}')
-            print("Received frames: " + str(fg_stat_rxf))
-            # Currently we have some DropFrames that we allow
-            if 0 != dropped_frames or crc_errors != 0:
-                print('Not all "CRCErrorCounter", "DropFrameCounter" = 0')
-                error_count += 1
-            if fg_stat_rxf > fg_stat_rxp:
-                print('fg_stat_rxf>fg_stat_rxp')
-                error_count += 1
-        (CallbackRegister_status,) = KYFG_StreamBufferCallbackUnregister(cameraStreamHandle, Stream_callback_func)
-        (status,) = KYFG_StreamDelete(cameraStreamHandle)
-    if camHandle > 0:
-        (KYFG_CameraClose_status,) = KYFG_CameraClose(camHandle)
-        camIndex += 1
+                print(f'CRCErrorCounter: {crc_errors}', f'DropFrameCounter: {dropped_frames}')
+                print(f'RXFrameCounter: {fg_stat_rxf}', f'RXPacketCounter: {fg_stat_rxp}')
+                print("Received frames: " + str(fg_stat_rxf))
+                # Currently we have some DropFrames that we allow
+                if 0 != dropped_frames or crc_errors != 0:
+                    print('Not all "CRCErrorCounter", "DropFrameCounter" = 0')
+                    error_count += 1
+                if fg_stat_rxf > fg_stat_rxp:
+                    print('fg_stat_rxf>fg_stat_rxp')
+                    error_count += 1
+            (CallbackRegister_status,) = KYFG_StreamBufferCallbackUnregister(cameraStreamHandle, Stream_callback_func)
+            (status,) = KYFG_StreamDelete(cameraStreamHandle)
+        if cameraHandle > 0:
+            (status,) = KYFG_CameraClose(cameraHandle)
+            cameraIndex += 1
 
     if grabberHandle != 0:
-        (KYFG_Close_status,) = KYFG_Close(grabberHandle)
+        (status,) = KYFG_Close(grabberHandle)
     assert error_count == 0, 'There are errors while test'
     return CaseReturnCode.SUCCESS
 
