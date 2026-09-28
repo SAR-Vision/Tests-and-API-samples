@@ -31,10 +31,10 @@ def CaseArgumentParser():
                         help='Index of PCI device to use, '
                              'run this script with "--deviceList" to see available devices and exit')
     # Other arguments needed for this specific case, PARSE CASE SPECIFIC ARGUMENTS UNDER THIS LINE:
-    parser.add_argument('--camera', type=str, default='Iron250C', help='Camera for test case')
+    parser.add_argument("--camera_model", type=str, default="Any", help="Camera model")
     parser.add_argument('--width', type=int, default=1024, help='Width of the camera')
     parser.add_argument('--height', type=int, default=512, help='Height of the camera')
-    parser.add_argument('--exposureTime', type=float, default=1000.0, help='exposure Time')
+    parser.add_argument('--exposureTime', type=float, default=100.0, help='exposure Time')
     parser.add_argument('--triggerCount', type=int, default=300, help='trigger Count')
     return parser
 
@@ -287,7 +287,7 @@ def CaseRun(args):
     if device_info.m_Protocol != KY_DEVICE_PROTOCOL.KY_DEVICE_PROTOCOL_CoaXPress:
         print('Test could not run on this grabber')
         return CaseReturnCode.COULD_NOT_RUN
-    camera = args['camera']
+    camera_model = args['camera_model']
     width = args['width']
     height = args['height']
     exposureTime = args['exposureTime']
@@ -295,37 +295,42 @@ def CaseRun(args):
     test_struct = TestStruct()
 
     (grabberHandle,) = KYFG_Open(device_index)
+    (status, device_info) = KY_DeviceInfo(device_index)  ##################################################
+
     ############################
     Reset_grabber(grabberHandle)
     ############################
 
-    (status, cameraList) = KYFG_UpdateCameraList(grabberHandle)
-    camIndex = 0
+    print("-----------------------------------------------------------")
+    print(f"Selected grabber: [{device_index}] {device_info.szDeviceDisplayName}, FGHANDLE: {str(grabberHandle)}")
+    print("-----------------------------------------------------------\n")
 
-    assert len(cameraList) != 0, 'There is no cameras on this device'
+    (status, camera_list) = KYFG_UpdateCameraList(grabberHandle)
 
-    camera_on_grabber = False
-    for cameraHandle in cameraList:
-        (status, camInfo) = KYFG_CameraInfo2(cameraHandle)
-        if camera == camInfo.deviceModelName:
-            camera_on_grabber = True
-            break
-
-    if not camera_on_grabber:
-        print(f'There is no camera {camera} on this grabber')
+    if len(camera_list) == 0:
+        print("-----------------------------------------------------------")
+        print('There is no cameras on this grabber')
+        print("-----------------------------------------------------------\n")
         return CaseReturnCode.NO_HW_FOUND
 
-    for cameraHandle in cameraList:
+    assertionFailed = False
+    camIndex = 0
+    error_count = 0
+
+    for cameraHandle in camera_list:
         (status, camInfo) = KYFG_CameraInfo2(cameraHandle)
-        if camera != camInfo.deviceModelName:
-            continue
         (status,) = KYFG_CameraOpen2(cameraHandle, None)
-        (status, camInfo) = KYFG_CameraInfo2(cameraHandle)
 
         KYFG_SetGrabberValueInt(grabberHandle, "CameraSelector", camIndex)
+
         #########################################
         Reset_camera(cameraHandle, grabberHandle)
         #########################################
+        camIndex = camera_list.index(cameraHandle)
+
+        print("-----------------------------------------------------------")
+        print(f"Selected camera: [{camIndex}] {camInfo.deviceModelName}, CAMHANDLE: {hex(cameraHandle)}")
+        print("-----------------------------------------------------------\n")
 
         try:
             (status,) = KYFG_SetCameraValueEnum(cameraHandle, "TriggerMode", 0)
@@ -336,7 +341,7 @@ def CaseRun(args):
         print(f'Camera {camInfo.deviceModelName} {camInfo.deviceVendorName} is open')
 
         # Set camera value
-        (status,) = KYFG_SetGrabberValueInt(grabberHandle, "CameraSelector", cameraList.index(cameraHandle))
+        (status,) = KYFG_SetGrabberValueInt(grabberHandle, "CameraSelector", camera_list.index(cameraHandle))
         (status,) = KYFG_SetCameraValueInt(cameraHandle, "Width", width)
         (status,) = KYFG_SetCameraValueInt(cameraHandle, "Height", height)
         (status, max_fps) = KYFG_GetCameraValueFloat(cameraHandle, "AcquisitionFrameRateMax")
@@ -349,19 +354,26 @@ def CaseRun(args):
         (status,) = KYFG_SetCameraValueEnum(cameraHandle, "TriggerMode", 1)
         frame_period_usec = 1000000/frame_fps
 
+        print("max_fps           =", max_fps)
+        print("frame_fps         =", frame_fps)
+        print("frame_period_usec =", frame_period_usec)
+        print("Timer0 delay      =", frame_period_usec / 2)
+        print("Timer0 duration   =", frame_period_usec / 2)
+        print("Timer1 duration   =", frame_period_usec * trigger_count)
+
         # Set grabber value
 
         # Set the TimerControl parameters to generate the trigger to the camera.
         (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "TimerSelector", "Timer0")
         (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "TimerTriggerSource", "KY_TIMER_ACTIVE_1")
         (status,) = KYFG_SetGrabberValueFloat(grabberHandle, "TimerDelay", frame_period_usec/2)
-        (status,) = KYFG_SetGrabberValueFloat(grabberHandle, "TimerDuration",frame_period_usec/2)
+        (status,) = KYFG_SetGrabberValueFloat(grabberHandle, "TimerDuration", frame_period_usec/2)
         (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "TimerActivation", "LevelHigh")
 
         # Set the second trigger to run first trigger
         (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "TimerSelector", "Timer1")
         (status,) = KYFG_SetGrabberValueFloat(grabberHandle, "TimerDelay", 1.0)
-        (status,) = KYFG_SetGrabberValueFloat(grabberHandle, "TimerDuration",frame_period_usec*trigger_count)
+        (status,) = KYFG_SetGrabberValueFloat(grabberHandle, "TimerDuration", frame_period_usec*trigger_count)
         (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "TimerActivation", "RisingEdge")
         (status,) = KYFG_SetGrabberValueEnum(grabberHandle, "TimerTriggerSource", 43)  # Software
 
@@ -371,15 +383,15 @@ def CaseRun(args):
         (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "CameraTriggerMode", "On")
 
         # Stream create
-        (status,streamHandle) = KYFG_StreamCreateAndAlloc(cameraHandle,16,0)
+        (status,streamHandle) = KYFG_StreamCreateAndAlloc(cameraHandle, 16, 0)
         stream_struct = StreamStruct()
 
-        duration = (frame_period_usec * trigger_count) / 1000000
+        # duration = (frame_period_usec * trigger_count) / 1000000
         (status,) = KYFG_StreamBufferCallbackRegister(streamHandle,callback_func,stream_struct)
         (status,) = KYFG_CameraStart(cameraHandle,streamHandle,0)
 
         KYFG_GrabberExecuteCommand(grabberHandle, "TimerTriggerSoftware")
-        time.sleep(duration)
+        time.sleep(5)
         (status,) = KYFG_CameraStop(cameraHandle)
         (status,) = KYFG_StreamBufferCallbackUnregister(streamHandle,callback_func)
         (status,) = KYFG_StreamDelete(streamHandle)
