@@ -329,7 +329,7 @@ int main(int argc, char **argv)
         }
     }
     KYBOOL inputValid = KYFALSE;
-    if (isUnnattended && (device_index > 0))
+    if (isUnnattended && (device_index >= 0))
     {
         grabberIndex = device_index;
     }
@@ -368,9 +368,9 @@ int main(int argc, char **argv)
         cameraInfoArray[i].version = 1;
         KYFG_CameraInfo2(cameraHandlesArray[i], &cameraInfoArray[i]);
         printf("[%d] %s: Firmware %s\n",
-            cameraIndex,
-            cameraInfoArray[cameraIndex].deviceModelName,
-            cameraInfoArray[cameraIndex].deviceFirmwareVersion);
+            i,
+            cameraInfoArray[i].deviceModelName,
+            cameraInfoArray[i].deviceFirmwareVersion);
     }
     inputValid = KYFALSE;
     if (!isUnnattended || (cameraIndex < 0))
@@ -378,7 +378,7 @@ int main(int argc, char **argv)
         printf("\nSelect camera:\n");
         while (!inputValid)
         {
-            NumberInRangeInput(0, nKayaDevicesCount - 1, &cameraIndex, "Invalid index\n");
+            NumberInRangeInput(0, nDetectedCameras - 1, &cameraIndex, "Invalid index\n");
 
             inputValid = KYTRUE;
             break;

@@ -2,6 +2,7 @@
 import sys
 import os
 import argparse
+
 os.environ["WithAdapter"] = "1"
 sys.path.insert(0, os.environ['KAYA_VISION_POINT_PYTHON_PATH'])
 from KYFGLib import *
@@ -18,6 +19,7 @@ import pathlib
 import platform
 import subprocess
 import json
+import time
 
 
 def CaseArgumentParser():
@@ -228,59 +230,79 @@ def find_exe_in_folder(folder: pathlib.Path):
 
 
 def findMSBuild():
-    # Find VsDevCmd.bat file
-    commands = ["cd/", "dir VsDevCmd.bat /s", ]
-    find_cmd_line = subprocess.run('&&'.join(commands), stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True,
-                                   text=True)
-    stdout_output = find_cmd_line.stdout.strip().split('\n')
-    stderr_output = find_cmd_line.stderr.strip()
-    stdout_output = stdout_output
-    paths_to_cmd = []
-    path_to_VsDevCmd = str
-    for i in stdout_output:
-        if 'Directory of ' in i:
-            new_path = i.replace('Directory of ', '')
-            paths_to_cmd.append(new_path.strip())
-    for i in paths_to_cmd:
-        if 'Microsoft Visual Studio' in i and '2017' in i:
-            path_to_VsDevCmd = i + r'\VsDevCmd.bat'
-    # Find MSBuild
-    command_for_find_MSBuild = f'"{path_to_VsDevCmd}" && where MSBuild'
-    start_searching_toMSBuild = subprocess.run(command_for_find_MSBuild, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                               shell=True, text=True)
-    searching_output = start_searching_toMSBuild.stdout.strip().split('\n')
-    path_to_MSBuild = None
-    for i in searching_output:
-        if 'Microsoft Visual Studio' in i and '2017' in i:
-            path_to_MSBuild = i
-    print('Path to MSBuild: ', path_to_MSBuild)
-    return path_to_MSBuild
+    roots = [
+        pathlib.Path(r"C:\Program Files"),
+        pathlib.Path(r"C:\Program Files (x86)"),
+    ]
+
+    editions = [
+        "Professional",
+        "Community",
+        "BuildTools",
+        "Enterprise",
+    ]
+
+    for root in roots:
+        for edition in editions:
+            path = (
+                root
+                / "Microsoft Visual Studio"
+                / "2017"
+                / edition
+                / "MSBuild"
+                / "15.0"
+                / "Bin"
+                / "MSBuild.exe"
+            )
+
+            if path.exists():
+                print("Path to MSBuild:", path)
+                return str(path)
+
+    raise FileNotFoundError(
+        "Visual Studio 2017 MSBuild.exe was not found "
+        "under Program Files or Program Files (x86)"
+    )
 
 
 def build_for_windows(msbuild_file, file_path, platform):
     print('*' * 30, 'Release BUILDING', '*' * 30)
 
-    command = f'"{msbuild_file}" "{file_path}" /p:configuration=Release /p:platform={platform} /t:Rebuild'
-    print(command)
+    command = [
+        msbuild_file,
+        str(file_path),
+        "/p:configuration=Release",
+        f"/p:platform={platform}",
+        "/t:Rebuild",
+    ]
+
+    print(" ".join(f'"{x}"' if " " in x else x for x in command))
 
     p = subprocess.Popen(
         command,
-        shell=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         close_fds=True
     )
-    output, errors = p.communicate()
-    releaseOutputLines = output.decode().strip()
-    if errors:
-        releaseErrorsLines = errors.decode().strip()
-        print(releaseOutputLines, releaseErrorsLines, sep='\n')
-    else:
-        print(releaseOutputLines)
-    for nextLine in releaseOutputLines:
-        if 'Error(s)' in nextLine:
-            assert ' 0 Error(s)' in nextLine, \
-                'Errors and warnings that occurred during the build RELEASE process\nLook at the output'
+
+    try:
+        output, _ = p.communicate(timeout=180)
+    except subprocess.TimeoutExpired:
+        p.kill()
+        output, _ = p.communicate()
+        print(output.decode(errors="replace"))
+        raise RuntimeError("MSBuild timed out after 180 seconds")
+
+    build_output = output.decode(errors="replace")
+    print(build_output)
+
+    if p.returncode != 0:
+        raise RuntimeError(
+            f"MSBuild failed with return code {p.returncode}. "
+            "The test executable will NOT be started."
+        )
+
+    print("MSBuild completed successfully.")
 
 
 def build_for_linux(case_folder: pathlib.Path):
@@ -301,21 +323,36 @@ def build_for_linux(case_folder: pathlib.Path):
 
 
 def start_test_case(case_folder: pathlib.Path, **kwargs):
-    arguments = ""
+    command = [str(gExe_file)]
+
     for k, v in kwargs.items():
-        arguments += f"--{k} {v} "
-    command = f"{gExe_file} {arguments}"
-    print(command)
+        command.extend([f"--{k}", str(v)])
+
+    print(" ".join(f'"{x}"' if " " in x else x for x in command))
+
     p = subprocess.Popen(
         command,
-        shell=True,
         cwd=case_folder.absolute().as_posix(),
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         close_fds=True
     )
-    output, errors = p.communicate(timeout=180)
-    print(output.decode())
+
+    try:
+        output, _ = p.communicate(timeout=180)
+
+    except subprocess.TimeoutExpired:
+        print("ERROR: case_4729.exe timed out after 180 seconds. Terminating it...")
+        p.kill()
+        output, _ = p.communicate()
+
+        print(output.decode(errors="replace"))
+
+        raise RuntimeError(
+            "case_4729.exe timed out after 180 seconds and was terminated"
+        )
+
+    print(output.decode(errors="replace"))
     return p.returncode
 
 
@@ -367,7 +404,7 @@ def CaseRun(args):
     # Other parameters used by this particular case
     global gExe_file
     (status, device_info) = KY_DeviceInfo(device_index)
-    if device_info.m_Protocol != KY_DEVICE_PROTOCOL.KY_DEVICE_PROTOCOL_CLHS:
+    if device_info.m_Protocol != KY_DEVICE_PROTOCOL.KY_DEVICE_PROTOCOL_CoaXPress:
         print('Test could not run on this grabber')
         return CaseReturnCode.COULD_NOT_RUN
 
