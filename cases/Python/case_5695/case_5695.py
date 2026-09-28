@@ -34,7 +34,7 @@ def CaseArgumentParser():
                         help='Index of PCI device to use, '
                              'run this script with "--deviceList" to see available devices and exit')
     # Other arguments needed for this specific case, PARSE CASE SPECIFIC ARGUMENTS UNDER THIS LINE:
-    parser.add_argument('--number_of_sent_tests', type=int, default=3, help='Number of sent triggers')
+    parser.add_argument('--number_of_sent_tests', type=int, default=10, help='Number of sent tests')
     return parser
 
 
