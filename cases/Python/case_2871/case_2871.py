@@ -33,7 +33,6 @@ def CaseArgumentParser():
     return parser
 
 
-
 # Common KAYA fragment_03
 # Grabber initialization for this specific test
 def Reset_grabber(grabberHandle):
@@ -206,7 +205,6 @@ def Reset_camera(cameraHandle, grabberHandle):     # Camera initialization for t
 # END OF Common KAYA fragment_03
 
 
-
 def ParseArgs():
     parser = CaseArgumentParser()
     args = parser.parse_args()
@@ -349,7 +347,7 @@ def CaseRun(args):
         print(f"Waiting ({waitingTime} sec) activation PoCXP on requested links...")
         time.sleep(waitingTime)
 
-        #Second detection: only the first camera should remain visible
+        # Second detection: only the first camera should remain visible
         (status, second_cameraList) = KYFG_UpdateCameraList(grabberHandle)
         print(f"Second detection cameras found: {len(second_cameraList)}")
 
@@ -362,9 +360,9 @@ def CaseRun(args):
             (status, camInfo) = KYFG_CameraInfo2(cameraHandle)
             (status,) = KYFG_CameraOpen2(cameraHandle, None)
 
-            #################################################
+            #########################################
             Reset_camera(cameraHandle, grabberHandle)
-            #################################################
+            #########################################
 
             print("-----------------------------------------------------------")
             print(f"Selected camera: [{cameraIndex}] {camInfo.deviceModelName}, CAMHANDLE: {hex(cameraHandle)}")
@@ -461,6 +459,7 @@ def CaseRun(args):
 # The flow starts here
 if __name__ == "__main__":
     try:
+        print("process ID: ", os.getpid())
         args_ = ParseArgs()
         return_code = CaseRun(args_)
         print(f'Case return code: {return_code}')
