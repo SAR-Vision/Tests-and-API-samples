@@ -2,6 +2,8 @@
 import sys
 import os
 import argparse
+from ctypes import py_object
+
 os.environ["WithAdapter"] = "1"
 sys.path.insert(0, os.environ['KAYA_VISION_POINT_PYTHON_PATH'])
 from KYFGLib import *
@@ -30,6 +32,7 @@ def CaseArgumentParser():
                         help='Index of PCI device to use, '
                              'run this script with "--deviceList" to see available devices and exit')
     # Other arguments needed for this specific case, PARSE CASE SPECIFIC ARGUMENTS UNDER THIS LINE:
+    parser.add_argument('--camera', type=str, default='Any', help='Model of camera')
     return parser
 
 
@@ -76,7 +79,7 @@ def Reset_camera(cameraHandle, grabberHandle):     # Camera initialization for t
         raise EnvironmentError("None of Environment variables KAYA_VISION_POINT_CONF")
 
     json_path = pathlib.Path(kaya_path) / "KAYA_Known_cameras.json"
-    print("kaya_path: ", kaya_path)
+    # print("kaya_path: ", kaya_path)
 
     if not os.path.exists(json_path):
         print(f"[ERROR] JSON file not found: {json_path}")
@@ -216,9 +219,8 @@ class StreamCallbackStruct:
         self.callbackCounter = 0
 
 
-class EventCallbackStruct:
-    def __init__(self):
-        self.cameraHandle = 0
+g_connection_lost_count = 0
+g_lost_handles = []
 
 
 def streamCallbackFunction(buffHandle, userContext):
@@ -233,10 +235,16 @@ def streamCallbackFunction(buffHandle, userContext):
 
 
 def eventCallbackFunction(userContext, event):
+    global g_connection_lost_count, g_lost_handles
+
     if isinstance(event, KYDEVICE_EVENT_CAMERA_CONNECTION_LOST):
-        (status, camInfo) = KYFG_CameraInfo2(event.camHandle)
-        print(camInfo.deviceModelName, 'connection lost event')
-        (status,) = KYFG_CameraClose(event.camHandle)
+        camera_handle = int(event.camHandle)
+        g_connection_lost_count += 1
+        g_lost_handles.append(camera_handle)
+        print(
+            f'Camera {hex(camera_handle)} connection lost event '
+            f'({g_connection_lost_count})'
+        )
 
 
 def CaseRun(args):
@@ -285,72 +293,202 @@ def CaseRun(args):
     # End of common KAYA prolog for "def CaseRun(args)"
 
     # Other parameters used by this particular case
-    (grabberHandle,) = KYFG_Open(device_index)
-    ############################
-    Reset_grabber(grabberHandle)
-    ############################
 
-    (status, camList) = KYFG_UpdateCameraList(grabberHandle)
-    event_struct = EventCallbackStruct()
-    (status,) = KYDeviceEventCallBackRegister(grabberHandle, eventCallbackFunction, py_object(event_struct))
+    global g_connection_lost_count, g_lost_handles
+
+    # Reset callback state for this test run
+    g_connection_lost_count = 0
+    g_lost_handles = []
+
+    (status, device_info) = KY_DeviceInfo(device_index)
+
+    grabberHandle = None
     error_count = 0
-    for i in range(len(camList)):
-        cameraHandle = camList[i]
-        (status, camInfo) = KYFG_CameraInfo2(cameraHandle)
-        if "Iron" not in camInfo.deviceModelName:
-            continue
-        (status,) = KYFG_CameraOpen2(cameraHandle, None)
 
-        #########################################
-        Reset_camera(cameraHandle, grabberHandle)
-        #########################################
-               
-        print(camInfo.deviceModelName, 'is open')
-        (status, streamHandle) = KYFG_StreamCreate(cameraHandle, 0)
-        callback_struct = StreamCallbackStruct()
-        (status,) = KYFG_StreamBufferCallbackRegister(streamHandle, streamCallbackFunction, callback_struct)
-        number_of_buffers = [0 for i in range(16)]
-        (status, payload_size, _, _) = KYFG_StreamGetInfo(streamHandle, KY_STREAM_INFO_CMD.KY_STREAM_INFO_PAYLOAD_SIZE)
-        for iFrame in range(len(number_of_buffers)):
-            (status, number_of_buffers[iFrame]) = KYFG_BufferAllocAndAnnounce(streamHandle, payload_size, 0)
-        (status,) = KYFG_BufferQueueAll(streamHandle, KY_ACQ_QUEUE_TYPE.KY_ACQ_QUEUE_UNQUEUED,
-                                        KY_ACQ_QUEUE_TYPE.KY_ACQ_QUEUE_INPUT)
-        (status,) = KYFG_CameraStart(cameraHandle, streamHandle, 0)
-        time.sleep(2)
-        (status, frame_counter) = KYFG_GetGrabberValueInt(grabberHandle, "RXFrameCounter")
-        (status, drop_frame_counter) = KYFG_GetGrabberValueInt(grabberHandle, "DropFrameCounter")
-        if drop_frame_counter != 0 or frame_counter == 0:
-            error_count += 1
-        print("frame_counter", frame_counter)
-        print("drop_frame_counter", drop_frame_counter)
-        KYFG_CameraExecuteCommand(cameraHandle, "DeviceReset")
+    try:
+        (grabberHandle,) = KYFG_Open(device_index)
 
-        time.sleep(3)
-        print("DeviceReset")
-        (status, frame_counter) = KYFG_GetGrabberValueInt(grabberHandle, "RXFrameCounter")
-        (status, drop_frame_counter) = KYFG_GetGrabberValueInt(grabberHandle, "DropFrameCounter")
-        print("frame_counter", frame_counter)
-        print("drop_frame_counter", drop_frame_counter)
+        ############################
+        Reset_grabber(grabberHandle)
+        ############################
 
-        if drop_frame_counter != 0 or frame_counter != 0:
-            error_count += 1
-        try:
+        print("-----------------------------------------------------------")
+        print(
+            f"Selected grabber: [{device_index}] "
+            f"{device_info.szDeviceDisplayName}, "
+            f"FGHANDLE: {str(grabberHandle)}"
+        )
+        print("-----------------------------------------------------------\n")
+
+        # Register event callback once
+        (status,) = KYDeviceEventCallBackRegister(
+            grabberHandle,
+            eventCallbackFunction,
+            None
+        )
+
+        (status, cameraList) = KYFG_UpdateCameraList(grabberHandle)
+
+        if len(cameraList) == 0:
+            print('There are no cameras on this grabber')
+            return CaseReturnCode.NO_HW_FOUND
+
+        original_camera_count = len(cameraList)
+        reset_camera_count = 0
+
+        for camIndex, cameraHandle in enumerate(cameraList):
+            (status, camInfo) = KYFG_CameraInfo2(cameraHandle)
+
+            if "Iron" not in camInfo.deviceModelName:
+                continue
+
+            print("-----------------------------------------------------------")
+            print(f"Camera before reset: [{camIndex}] {camInfo.deviceModelName}, CAMHANDLE: {hex(cameraHandle)}")
+            print("-----------------------------------------------------------")
+
+            (status,) = KYFG_SetGrabberValueInt(grabberHandle, "CameraSelector", camIndex)
             (status,) = KYFG_CameraOpen2(cameraHandle, None)
-        except Exception as e:
-            print(type(e), str(e))
-        (status, camList) = KYFG_UpdateCameraList(grabberHandle)
 
-        try:
+            #########################################
+            Reset_camera(cameraHandle, grabberHandle)
+            #########################################
+
+            print(camInfo.deviceModelName, 'is open')
+
+            (status, streamHandle) = KYFG_StreamCreate(cameraHandle, 0)
+            callback_struct = StreamCallbackStruct()
+            (status,) = KYFG_StreamBufferCallbackRegister(streamHandle, streamCallbackFunction, callback_struct)
+
+            number_of_buffers = [0 for _ in range(16)]
+            (status, payload_size, _, _) = KYFG_StreamGetInfo(streamHandle, KY_STREAM_INFO_CMD.KY_STREAM_INFO_PAYLOAD_SIZE)
+
+            for iFrame in range(len(number_of_buffers)):
+                (status, number_of_buffers[iFrame]) = KYFG_BufferAllocAndAnnounce(streamHandle, payload_size, 0)
+
+            (status,) = KYFG_BufferQueueAll(
+                streamHandle,
+                KY_ACQ_QUEUE_TYPE.KY_ACQ_QUEUE_UNQUEUED,
+                KY_ACQ_QUEUE_TYPE.KY_ACQ_QUEUE_INPUT
+            )
+
+            (status,) = KYFG_CameraStart(cameraHandle, streamHandle, 0)
+            time.sleep(2)
+
+            (status, frame_counter) = KYFG_GetGrabberValueInt(grabberHandle, "RXFrameCounter")
+            (status, drop_frame_counter) = KYFG_GetGrabberValueInt(grabberHandle, "DropFrameCounter")
+
+            print("frame_counter", frame_counter)
+            print("drop_frame_counter", drop_frame_counter)
+
+            if frame_counter == 0 or drop_frame_counter != 0:
+                print(f"[FAIL] {camInfo.deviceModelName}: invalid statistics before DeviceReset")
+                error_count += 1
+
+            KYFG_CameraExecuteCommand(cameraHandle, "DeviceReset")
+            reset_camera_count += 1
+            time.sleep(3)
+            print(f"\n######## DeviceReset: {camInfo.deviceModelName} ########\n")
+
+        print(f"Waiting for connection-lost events: {g_connection_lost_count}/{reset_camera_count}")
+        wait_timeout_sec = 10.0
+        wait_start = time.monotonic()
+
+        while g_connection_lost_count < reset_camera_count:
+            if time.monotonic() - wait_start >= wait_timeout_sec:
+                print(
+                    f"[FAIL] Received only {g_connection_lost_count}/{reset_camera_count} "
+                    f"connection-lost events within {wait_timeout_sec:g} seconds"
+                )
+                error_count += 1
+                break
+            time.sleep(0.1)
+
+        print(f"Connection-lost events completed: {g_connection_lost_count}/{reset_camera_count}")
+
+        print("\n========== FULL CAMERA SCAN AFTER RESET ==========\n")
+
+        (status, scanParameters) = KYFG_CameraScanEx(grabberHandle, False)
+        cameraListAfterReset = list(scanParameters.pCamHandleArray)
+
+        print(f"Cameras before reset : {original_camera_count}")
+        print(f"Cameras after rescan : {len(cameraListAfterReset)}")
+
+        if len(cameraListAfterReset) != original_camera_count:
+            print("[FAIL] Number of cameras after DeviceReset does not match initial camera count")
+            error_count += 1
+
+        for camIndex, cameraHandle in enumerate(cameraListAfterReset):
+            (status, camInfo) = KYFG_CameraInfo2(cameraHandle)
+
+            if "Iron" not in camInfo.deviceModelName:
+                continue
+
+            print("-----------------------------------------------------------")
+            print(f"Redetected camera: [{camIndex}] {camInfo.deviceModelName}, CAMHANDLE: {hex(cameraHandle)}")
+            print("-----------------------------------------------------------")
+
+            (status,) = KYFG_SetGrabberValueInt(grabberHandle, "CameraSelector", camIndex)
             (status,) = KYFG_CameraOpen2(cameraHandle, None)
-            time.sleep(1)
+            print(f"{camInfo.deviceModelName} is open after DeviceReset")
+
+            (status, frame_counter) = KYFG_GetGrabberValueInt(grabberHandle, "RXFrameCounter")
+            (status, drop_frame_counter) = KYFG_GetGrabberValueInt(grabberHandle, "DropFrameCounter")
+
+            print("frame counter after Reset", frame_counter)
+            print("drop frame counter after Reset", drop_frame_counter)
+
+            if frame_counter != 0 or drop_frame_counter != 0:
+                print(f"[FAIL] {camInfo.deviceModelName}: counters are not zero after DeviceReset")
+                error_count += 1
+
+            (status, streamHandle) = KYFG_StreamCreate(cameraHandle, 0)
+            callback_struct = StreamCallbackStruct()
+            (status,) = KYFG_StreamBufferCallbackRegister(streamHandle, streamCallbackFunction, callback_struct)
+
+            number_of_buffers = [0 for _ in range(16)]
+            (status, payload_size, _, _) = KYFG_StreamGetInfo(streamHandle, KY_STREAM_INFO_CMD.KY_STREAM_INFO_PAYLOAD_SIZE)
+
+            for iFrame in range(len(number_of_buffers)):
+                (status, number_of_buffers[iFrame]) = KYFG_BufferAllocAndAnnounce(streamHandle, payload_size, 0)
+
+            (status,) = KYFG_BufferQueueAll(
+                streamHandle,
+                KY_ACQ_QUEUE_TYPE.KY_ACQ_QUEUE_UNQUEUED,
+                KY_ACQ_QUEUE_TYPE.KY_ACQ_QUEUE_INPUT
+            )
+
+            (status,) = KYFG_CameraStart(cameraHandle, streamHandle, 0)
+            time.sleep(2)
+
+            (status, frame_counter) = KYFG_GetGrabberValueInt(grabberHandle, "RXFrameCounter")
+            (status, drop_frame_counter) = KYFG_GetGrabberValueInt(grabberHandle, "DropFrameCounter")
+
+            print("frame counter after Reset + stream", frame_counter)
+            print("drop frame counter after Reset + stream", drop_frame_counter)
+
+            if frame_counter == 0 or drop_frame_counter != 0:
+                print(f"[FAIL] {camInfo.deviceModelName}: invalid statistics after reconnect")
+                error_count += 1
+
+            (status,) = KYFG_CameraStop(cameraHandle)
+            (status,) = KYFG_StreamBufferCallbackUnregister(streamHandle, streamCallbackFunction)
+            (status,) = KYFG_StreamDelete(streamHandle)
             (status,) = KYFG_CameraClose(cameraHandle)
-        except Exception as e:
-            print(type(e), str(e))
-            error_count += 1
-    (status,) = KYFG_Close(grabberHandle)
-    assert error_count == 0, 'Test not passed'
-    print(f'\nExiting from CaseRun({args}) with code SUCCESS...')
-    return CaseReturnCode.SUCCESS
+
+        print(f"\nTest completed. error_count = {error_count}")
+        assert error_count == 0, 'Test not passed'
+
+        print(f'\nExiting from CaseRun({args}) with code SUCCESS...')
+        return CaseReturnCode.SUCCESS
+
+    finally:
+        if grabberHandle is not None:
+            try:
+                (status,) = KYDeviceEventCallBackUnregister(grabberHandle, eventCallbackFunction)
+            except Exception:
+                pass
+
+            (status,) = KYFG_Close(grabberHandle)
 
 
 # The flow starts here
