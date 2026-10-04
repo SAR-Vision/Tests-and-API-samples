@@ -222,6 +222,8 @@ def streamCallbackFunc(bufferHandle, userContext):
         stream_timestamp.append(timestamp)
     except:
         pass
+    finally:
+        KYFG_BufferToQueue(bufferHandle, KY_ACQ_QUEUE_TYPE.KY_ACQ_QUEUE_INPUT)
 
 
 def auxCallbackFunc(bufferHandle, userContext):
@@ -307,12 +309,15 @@ def CaseRun(args):
 
     print(
         f'Opened device [{device_index}]: (PCI {device_info.nBus}:{device_info.nSlot}:{device_info.nFunction})"{device_info.szDeviceDisplayName}"')
+
     (status, camHandleArray_col) = KYFG_UpdateCameraList(grabberHandle)
     camIndex = 0
 
     if len(camHandleArray_col) == 0:
+        print('There are no cameras on this grabber')
         return CaseReturnCode.NO_HW_FOUND
     error_count = 0
+
     for cameraHandle in camHandleArray_col:
         aux_timestamps = []
         stream_timestamp = []
@@ -320,27 +325,14 @@ def CaseRun(args):
         (status,) = KYFG_CameraOpen2(cameraHandle, None)
         print(f'\nCamera {camInfo.deviceModelName} is open')
 
-        KYFG_SetGrabberValueInt(grabberHandle, "CameraSelector", camIndex)
+        (status,) = KYFG_SetGrabberValueInt(grabberHandle, "CameraSelector", camIndex)
         #########################################
         Reset_camera(cameraHandle, grabberHandle)
         #########################################
 
-        # Set up the timer to have the required FPS
-        # (status, fpsMax) = KYFG_GetCameraValueFloat(cameraHandle, "AcquisitionFrameRateMax")
-        # check trigger mode
-        try:
-            if KYFG_IsGrabberValueImplemented(grabberHandle, 'TriggerMode'):
-                KYFG_SetGrabberValueEnum(grabberHandle, "TriggerMode", 0)
-            if KYFG_IsGrabberValueImplemented(grabberHandle, 'CameraTriggerMode'):
-                KYFG_SetGrabberValueEnum(grabberHandle, "CameraTriggerMode", 0)
-            if KYFG_IsCameraValueImplemented(cameraHandle, "TriggerMode"):
-                KYFG_SetCameraValueEnum(cameraHandle, "TriggerMode", 0)
-            if KYFG_IsCameraValueImplemented(cameraHandle, "SimulationTriggerMode"):
-                KYFG_SetCameraValueEnum(cameraHandle, "SimulationTriggerMode", 0)
-        except:
-            pass
+        (status, fpsMax) = KYFG_GetCameraValueFloat(cameraHandle, "AcquisitionFrameRateMax")
 
-        # (status,) = KYFG_SetCameraValueFloat(cameraHandle, "AcquisitionFrameRate", fpsMax*0.95)
+        (status,) = KYFG_SetCameraValueFloat(cameraHandle, "AcquisitionFrameRate", fpsMax*0.95)
         (status, fps) = KYFG_GetCameraValueFloat(cameraHandle, "AcquisitionFrameRate")
         print(f'FPS: {fps}')
 
@@ -354,19 +346,19 @@ def CaseRun(args):
         (status,) = KYFG_SetGrabberValueFloat(grabberHandle, "TimerDelay", timer_period)
         (status,) = KYFG_SetGrabberValueFloat(grabberHandle, "TimerDuration", timer_period)
         (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "TimerEventMode", 'RisingEdge')
-        # Set up the trigger:
 
         # FG parameters:
-        (status,) = KYFG_SetGrabberValueInt(grabberHandle, "CameraSelector", 0)
         (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "CameraTriggerActivation", 'AnyEdge')
-        (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "CameraTriggerSource", f'KY_TIMER_ACTIVE_0')
+        (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "CameraTriggerSource", "KY_TIMER_ACTIVE_0")
         (status,) = KYFG_SetGrabberValueEnum(grabberHandle, "CameraTriggerMode", 1)
-        (status,) = KYFG_SetGrabberValueEnum(grabberHandle, "TriggerMode", 1)
+        # (status,) = KYFG_SetGrabberValueEnum(grabberHandle, "TriggerMode", 1)
+        (status,) = KYFG_SetCameraValueEnum(cameraHandle, "TriggerMode", 1)
+        (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "TimerTriggerSource", 'KY_CONTINUOUS')
 
         # Camera Parameters:
         if 'Chameleon' not in camInfo.deviceModelName:
             if KYFG_IsGrabberValueImplemented(cameraHandle, 'TriggerMode'):
-                (status,) = KYFG_SetCameraValueEnum(cameraHandle, "TriggerMode", 0)
+                (status,) = KYFG_SetCameraValueEnum(cameraHandle, "TriggerMode", 1)
                 KYFG_SetCameraValueEnum(cameraHandle, "ExposureAuto", 0)
                 (status,) = KYFG_SetCameraValueFloat(cameraHandle, "ExposureTime", timer_period)
             else:
@@ -374,18 +366,24 @@ def CaseRun(args):
         else:
             (status,) = KYFG_SetCameraValueEnum(cameraHandle, "SimulationTriggerMode", 0)
 
-        (status,streamHandle) = KYFG_StreamCreateAndAlloc(cameraHandle, 16, 0)
+        # (status, cam_trigger_readback) = KYFG_GetCameraValueEnum(cameraHandle, "TriggerMode")
+        # print("Camera TriggerMode now:", cam_trigger_readback)
+
+        (status, streamHandle) = KYFG_StreamCreateAndAlloc(cameraHandle, 16, 0)
         (status,) = KYFG_StreamBufferCallbackRegister(streamHandle, streamCallbackFunc, None)
         (status,) = KYFG_AuxDataCallbackRegister(grabberHandle, auxCallbackFunc, None)
 
         (status,) = KYFG_CameraStart(cameraHandle, streamHandle, 0)
-        (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "TimerTriggerSource", 'KY_CONTINUOUS')
-        waitFortime(1)
+
+        waitFortime(5)
+        print(len(stream_timestamp))
         (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "TimerTriggerSource", 'KY_DISABLED')
         (status,) = KYFG_CameraStop(cameraHandle)
 
         (status,) = KYFG_StreamBufferCallbackUnregister(streamHandle, streamCallbackFunc)
         (status,) = KYFG_AuxDataCallbackUnregister(grabberHandle, auxCallbackFunc)
+        (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "CameraTriggerMode", "Off")
+        (status,) = KYFG_SetGrabberValueEnum(grabberHandle, "TriggerMode", 0)
         (status,) = KYFG_StreamDelete(streamHandle)
         (status,) = KYFG_CameraClose(cameraHandle)
         camIndex += 1
@@ -395,14 +393,18 @@ def CaseRun(args):
         print('AUX callbacks: ', len(aux_timestamps))
 
         assert len(aux_timestamps) > 0, 'No AUX callbacks got'
+
         for i in range(min(len(stream_timestamp), len(aux_timestamps))):
             if not is_approximately_equal(stream_timestamp[i], aux_timestamps[i], 0.1):
                 print('Timestamps AUX and stream is not equals')
                 print(stream_timestamp[i], aux_timestamps[i])
                 error_count += 1
         print('error_count', error_count)
-    (status,) = KYFG_SetGrabberValueEnum(grabberHandle, "CameraTriggerMode", 0)
-    (status,) = KYFG_SetGrabberValueEnum(grabberHandle, "TriggerMode", 0)
+
+        if len(stream_timestamp) != len(aux_timestamps):
+            print("Stream callbacks doesn't equal AUX callbacks")
+            error_count += 1
+
     (status,) = KYFG_Close(grabberHandle)
     assert error_count == 0, 'There are errors while test'
     return CaseReturnCode.SUCCESS
