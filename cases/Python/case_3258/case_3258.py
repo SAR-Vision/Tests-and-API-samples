@@ -30,8 +30,8 @@ def CaseArgumentParser():
                         help='Index of PCI device to use, '
                              'run this script with "--deviceList" to see available devices and exit')
     # Other arguments needed for this specific case, PARSE CASE SPECIFIC ARGUMENTS UNDER THIS LINE:
-    parser.add_argument('--cameraModel', type=str, default='Iron250C', help='Model of camera')
-    parser.add_argument('--xml_file_path', type=str, default="Iron250C.xml", help='xml_file_path')
+    parser.add_argument('--cameraModel', type=str, default='Any', help='Model of camera')
+    parser.add_argument('--xml_file_path', type=str, default="Iron_CXP12.xml", help='xml_file_path')
     return parser
 
 
@@ -254,7 +254,25 @@ def CaseRun(args):
 
     # Other parameters used by this particular case
     cameraModel = args['cameraModel']
-    xml_file_path = str(pathlib.Path(__file__).parent.joinpath(args['xml_file_path']))
+    test_folder = pathlib.Path(__file__).resolve().parent
+
+    def get_xml_pair(camera_model):
+        special_models = {
+            'Iron2020BSI-M': 'Iron2020BSI-M',
+            'Iron2020eM': 'Iron2020eM',
+            'JetCam19C': 'JetCam19C',
+        }
+
+        if camera_model in special_models:
+            xml_base_name = special_models[camera_model]
+        elif camera_model.startswith('Iron') and camera_model.endswith(('C', 'M')):
+            xml_base_name = 'Iron_CXP12'
+        else:
+            xml_base_name = camera_model
+
+        correct_xml = test_folder.joinpath(f'{xml_base_name}.xml')
+        incorrect_xml = test_folder.joinpath(f'{xml_base_name}_Incorrect.xml')
+        return correct_xml, incorrect_xml
 
     (status, device_info) = KY_DeviceInfo(device_index)
     (grabberHandle,) = KYFG_Open(device_index)
@@ -264,91 +282,167 @@ def CaseRun(args):
     ############################
 
     print("-----------------------------------------------------------")
-    print(f"Selected grabber: [{device_index}] {device_info.szDeviceDisplayName}, FGHANDLE: {str(grabberHandle)}")
+    print(
+        f"Selected grabber: [{device_index}] "
+        f"{device_info.szDeviceDisplayName}, FGHANDLE: {str(grabberHandle)}"
+    )
     print("-----------------------------------------------------------\n")
 
-    (_, camHandleArray) = KYFG_UpdateCameraList(grabberHandle)
+    (status, camera_list) = KYFG_UpdateCameraList(grabberHandle)
 
-    camIndex = 0
-    errorCount = 0
-
-    targetCameraModel = None
-    targetXMLFileName = None
-    targetCamHandle = None
-
-    if len(camHandleArray):
-        # Try to find a camera for test
-        for cameraHandle in camHandleArray:
-            (status, cameraInfo) = KYFG_CameraInfo2(cameraHandle)
-            if cameraModel == 'Any':
-                currentExpectedXMLFileName = f"{cameraInfo.deviceModelName}.xml"
-                if pathlib.Path(currentExpectedXMLFileName).exists():
-                    targetCameraModel = cameraInfo.deviceModelName
-                    targetXMLFileName = currentExpectedXMLFileName
-                    targetCamHandle = cameraHandle
-                    break
-            else:
-                if cameraModel in cameraInfo.deviceModelName:
-                    targetCameraModel = cameraModel
-                    targetXMLFileName = xml_file_path
-                    targetCamHandle = cameraHandle
-                    break
-
-    if targetCamHandle is None:
-        if not len(camHandleArray):
-            print("-----------------------------------------------------------")
-            print('No cameras was found on this grabber')
-            print("-----------------------------------------------------------\n")
-        else:
-            print("-----------------------------------------------------------")
-            print(f"No relevant camera was found on this grabber'")
-            if cameraModel != "Any":
-                print(f"XML file '{xml_file_path}' for target model: '{cameraModel}' exists: '{str(pathlib.Path(xml_file_path).exists())}'")
-            else:
-                print(f"None of the predefined XML files match the cameras connected to the current grabber")
-
-            print(f"Found cameras on current grabber:")
-            for cameraHandle in camHandleArray:
-                (status, cameraInfo) = KYFG_CameraInfo2(cameraHandle)
-                cameraIndex = camHandleArray.index(cameraHandle)
-                print(f"Camera: [{cameraIndex}] {cameraInfo.deviceModelName}, CAMHANDLE: {hex(cameraHandle)}")
-            print("-----------------------------------------------------------\n")
-
+    if len(camera_list) == 0:
+        print("-----------------------------------------------------------")
+        print('There are no cameras on this grabber')
+        print("-----------------------------------------------------------\n")
         KYFG_Close(grabberHandle)
         return CaseReturnCode.NO_HW_FOUND
 
-    cameraIndex = camHandleArray.index(targetCamHandle)
+    errorCount = 0
+    testedCameraCount = 0
 
-    print("-----------------------------------------------------------")
-    print(f"Selected camera: [{cameraIndex}] {targetCameraModel}, CAMHANDLE: {hex(targetCamHandle)}")
-    print("-----------------------------------------------------------\n")
+    for camIndex, cameraHandle in enumerate(camera_list):
+        (status, camInfo) = KYFG_CameraInfo2(cameraHandle)
+        actualCameraModel = camInfo.deviceModelName
 
-    (status,) = KYFG_CameraOpen2(targetCamHandle, targetXMLFileName)
+        if cameraModel != 'Any' and cameraModel not in actualCameraModel:
+            print(
+                f'[SKIP] Camera [{camIndex}] {actualCameraModel}: '
+                f'does not match requested cameraModel="{cameraModel}"'
+            )
+            continue
 
-    KYFG_SetGrabberValueInt(grabberHandle, "CameraSelector", camIndex)
-    ############################################
-    Reset_camera(targetCamHandle, grabberHandle)
-    ############################################
+        correct_xml, incorrect_xml = get_xml_pair(actualCameraModel)
 
-    print(f'Camera [{cameraIndex}] {targetCameraModel}, CAMHANDLE: {hex(targetCamHandle)} opened with overrided XML file: {targetXMLFileName}')
+        print("-----------------------------------------------------------")
+        print(f"Selected camera: [{camIndex}] {actualCameraModel}")
+        print(f"Correct XML:   {correct_xml}")
+        print(f"Override XML:  {incorrect_xml}")
+        print("-----------------------------------------------------------")
 
-    if KYFG_IsCameraValueImplemented(targetCamHandle, 'AcquisitionFrameRateMax'):
-        (status, fpsMax) = KYFG_GetCameraValueFloat(targetCamHandle, "AcquisitionFrameRateMax")
-        print(f"Read parameter 'AcquisitionFrameRateMax' value from camera: {fpsMax}")
-        if fpsMax > 0:
-            print("The wrong XML file was loaded. The overridden XML file was expected instead of the original one")
+        if not correct_xml.is_file() or not incorrect_xml.is_file():
+            print(f'[SKIP] XML pair for camera {actualCameraModel} was not found.')
+            print(f'       Correct XML exists:  {correct_xml.is_file()}')
+            print(f'       Incorrect XML exists: {incorrect_xml.is_file()}')
+            print()
+            continue
+
+        testedCameraCount += 1
+
+        camera_opened = False
+        try:
+            (status,) = KYFG_CameraOpen2(cameraHandle, str(correct_xml))
+            camera_opened = True
+
+            (status,) = KYFG_SetGrabberValueInt(
+                grabberHandle,
+                "CameraSelector",
+                camIndex
+            )
+
+            #########################################
+            Reset_camera(cameraHandle, grabberHandle)
+            #########################################
+
+            print(
+                f'Camera [{camIndex}] {actualCameraModel} opened with '
+                f'correct XML: {correct_xml.name}'
+            )
+
+            if KYFG_IsCameraValueImplemented(cameraHandle, 'AcquisitionFrameRateMax'):
+                (status, fpsMax) = KYFG_GetCameraValueFloat(
+                    cameraHandle,
+                    'AcquisitionFrameRateMax'
+                )
+                print(
+                    "Baseline check: 'AcquisitionFrameRateMax' exists, "
+                    f"value = {fpsMax}"
+                )
+            else:
+                print(
+                    "[FAIL] Baseline XML does not contain "
+                    "'AcquisitionFrameRateMax'."
+                )
+                errorCount += 1
+
+        except Exception as ex:
+            print(
+                f'[FAIL] Could not test correct XML for '
+                f'{actualCameraModel}: {ex}'
+            )
             errorCount += 1
-    else:
-        print(f"Parameter 'AcquisitionFrameRateMax' was not found in the overridden XML file - this is EXPECTED and "
-              f"CORRECT")
 
-    (status,) = KYFG_CameraClose(targetCamHandle)
-    camIndex += 1
-    print(f'Camera [{cameraIndex}] {targetCameraModel}, CAMHANDLE: {hex(targetCamHandle)} closed')
+        finally:
+            if camera_opened:
+                try:
+                    (status,) = KYFG_CameraClose(cameraHandle)
+                except Exception:
+                    pass
+
+        camera_opened = False
+        try:
+            (status,) = KYFG_CameraOpen2(cameraHandle, str(incorrect_xml))
+            camera_opened = True
+
+            (status,) = KYFG_SetGrabberValueInt(
+                grabberHandle,
+                "CameraSelector",
+                camIndex
+            )
+
+            print(
+                f'Camera [{camIndex}] {actualCameraModel} opened with '
+                f'overridden XML: {incorrect_xml.name}'
+            )
+
+            if KYFG_IsCameraValueImplemented(cameraHandle, 'AcquisitionFrameRateMax'):
+                (status, fpsMax) = KYFG_GetCameraValueFloat(
+                    cameraHandle,
+                    'AcquisitionFrameRateMax'
+                )
+                print(
+                    "[FAIL] 'AcquisitionFrameRateMax' is still available "
+                    f'after XML override, value = {fpsMax}'
+                )
+                print(
+                    "The original/default XML appears to be active instead "
+                    "of the overridden XML."
+                )
+                errorCount += 1
+            else:
+                print(
+                    "[PASS] 'AcquisitionFrameRateMax' was not found in "
+                    "the overridden XML, as expected."
+                )
+
+        except Exception as ex:
+            print(
+                f'[FAIL] Could not test overridden XML for '
+                f'{actualCameraModel}: {ex}'
+            )
+            errorCount += 1
+
+        finally:
+            if camera_opened:
+                try:
+                    (status,) = KYFG_CameraClose(cameraHandle)
+                except Exception:
+                    pass
+
+        print(f'Camera [{camIndex}] {actualCameraModel} test completed')
+        print()
 
     (status,) = KYFG_Close(grabberHandle)
-    assert errorCount == 0
-    print(f'\nExiting from CaseRun({args}) with code 0...')
+
+    if testedCameraCount == 0:
+        print('No camera with a matching XML pair was found.')
+        return CaseReturnCode.NO_HW_FOUND
+
+    assert errorCount == 0, f'There are {errorCount} XML override test errors'
+
+    print(
+        f'\nTested cameras: {testedCameraCount}'
+        f'\nExiting from CaseRun({args}) with code SUCCESS...'
+    )
     return CaseReturnCode.SUCCESS
 
 
