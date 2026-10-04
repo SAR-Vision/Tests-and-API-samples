@@ -358,24 +358,24 @@ def CaseRun(args):
         print(f"Selected camera: [{cameraIndex}] {camInfo.deviceModelName}, CAMHANDLE: {hex(cameraHandle)}")
         print("-----------------------------------------------------------\n")
 
-        actual_width                    = 0
-        actual_height                   = 0
-        actual_acquisition_frame_rate   = 0.0
+        actual_width                  = 0
+        actual_height                 = 0
+        actual_acquisition_frame_rate = 0.0
 
         # set camera value
         if 'Chameleon' in camInfo.deviceModelName:
-            expected_acquisition_frame_rate = 150.0
-            expected_width = 1200
-            expected_height = 1000
-
-            (status,) = KYFG_SetCameraValueInt(cameraHandle, "Width", expected_width)
-            (status,) = KYFG_SetCameraValueInt(cameraHandle, "Height", expected_height)
-            (status,) = KYFG_SetCameraValueFloat(cameraHandle, "AcquisitionFrameRate", expected_acquisition_frame_rate)
-
-            (status, actual_width) = KYFG_GetCameraValueInt(cameraHandle, "Width")
-            (status, actual_height) = KYFG_GetCameraValueInt(cameraHandle, "Height")
-            (status, actual_acquisition_frame_rate) = KYFG_GetCameraValueFloat(cameraHandle, "AcquisitionFrameRate")
-
+            continue
+            # expected_acquisition_frame_rate = 150.0
+            # expected_width = 1200
+            # expected_height = 1000
+            #
+            # (status,) = KYFG_SetCameraValueInt(cameraHandle, "Width", expected_width)
+            # (status,) = KYFG_SetCameraValueInt(cameraHandle, "Height", expected_height)
+            # (status,) = KYFG_SetCameraValueFloat(cameraHandle, "AcquisitionFrameRate", expected_acquisition_frame_rate)
+            #
+            # (status, actual_width) = KYFG_GetCameraValueInt(cameraHandle, "Width")
+            # (status, actual_height) = KYFG_GetCameraValueInt(cameraHandle, "Height")
+            # (status, actual_acquisition_frame_rate) = KYFG_GetCameraValueFloat(cameraHandle, "AcquisitionFrameRate")
         else:
             if KYFG_IsCameraValueImplemented(cameraHandle, "WidthMax"):
                 (status, width) = KYFG_GetCameraValueInt(cameraHandle, "WidthMax")
