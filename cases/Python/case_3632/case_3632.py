@@ -219,18 +219,6 @@ def ParseArgs():
 gExe_file = None
 
 
-# def find_exe_in_folder(folder: pathlib.Path):
-#     global gExe_file
-#     if "linux" in platform.platform().lower() or 'tegra' in platform.platform().lower():
-#         gExe_file = folder.joinpath(pathlib.Path(__file__).name.replace(".py", ""))
-#         return
-#     for next_file in folder.iterdir():
-#         if next_file.is_dir():
-#             find_exe_in_folder(next_file)
-#         elif next_file.is_file() and next_file.name == pathlib.Path(__file__).name.replace(".py", ".exe"):
-#             gExe_file = next_file.as_posix()
-#             break
-
 def find_exe_in_folder(folder: pathlib.Path):
     global gExe_file
     for next_file in folder.iterdir():
@@ -387,10 +375,14 @@ def CaseRun(args):
     # 'binary_test_executables').joinpath(pathlib.Path(__file__).name.replace(".py", ""))
 
     # number_of_tests = args["number_of_tests"]
-    case_folder = pathlib.Path.cwd().joinpath('binary_test_executables')
-    vcxprojFile = case_folder.joinpath(pathlib.Path(__file__).name.replace(".py", "")).joinpath(
-        pathlib.Path(__file__).name.replace(".py", ".vcxproj")
-    )
+
+    # Resolve the binary-test folder from this script location, not from cwd.
+    # This works whether the test is started from the project root or from
+    # cases/Python/case_xxxx.
+    case_name = pathlib.Path(__file__).stem
+    cases_folder = pathlib.Path(__file__).resolve().parents[2]
+    case_folder = cases_folder.joinpath('binary_test_executables')
+    vcxprojFile = case_folder.joinpath(case_name).joinpath(f'{case_name}.vcxproj')
     print("\ncwd:", pathlib.Path.cwd())
     print("case folder: ", case_folder)
     print("vcxprojFile: ", vcxprojFile)
