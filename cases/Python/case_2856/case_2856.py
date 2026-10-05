@@ -39,8 +39,8 @@ def CaseArgumentParser():
     parser.add_argument('--height', type=int, default=22, help='Height')
     parser.add_argument('--cameraPixelFormat', type=str, default="BayerBG2", help='cameraPixelFormat')
     parser.add_argument('--grabberPixelFormat', type=str, default="RGB2", help='grabberPixelFormat')
-    parser.add_argument('normal_expected_raw', type=str, help='Expected RAW image before debayering')
-    parser.add_argument('debayered_expected_raw', type=str, help='Expected RAW image after debayering')
+    parser.add_argument('--normal_expected_raw', type=str, help='Expected RAW image before debayering')
+    parser.add_argument('--debayered_expected_raw', type=str, help='Expected RAW image after debayering')
     return parser
 
 
@@ -251,6 +251,123 @@ def numpy_from_data(buffData, buffSize, datatype):
     return np.frombuffer(buffer, datatype)
 
 
+def camera_load_default_set(cameraHandle):
+    (status,) = KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "UserSetSelector", "Default")
+    (status,) = KYFG_CameraExecuteCommand(cameraHandle, "UserSetLoad")
+    print("Default User Set loaded")
+    return 0
+
+
+def get_camera_type(cameraHandle):
+    (status, camera_model) = KYFG_GetCameraValue(cameraHandle, "DeviceModelName")
+    if camera_model[-1] == "M":
+        camera_type = "Mono"
+    elif camera_model[-1] == "C":
+        camera_type = "Color"
+    else:
+        print("Unknown camera type...")
+        exit()
+    return camera_type
+
+
+def disable_corrections(cameraHandle, camera_type):
+    (status,) = KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "TestPattern", "Off")
+    (status,) = KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "TriggerMode", "Off")
+    try:
+        (status,) = KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "BlackLevelAuto", "Off")
+    except KYException:
+        print("BlackLevelAuto not supported!")
+    try:
+        (status,) = KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "BlackLevelSelector", "All")
+        (status,) = KYFG_SetCameraValueFloat(cameraHandle, "BlackLevel", 0.0)
+    except KYException:
+        print("BlackLevel All not supported!")
+    try:
+        (status,) = KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "BlackLevelSelector", "Red")
+        (status,) = KYFG_SetCameraValueFloat(cameraHandle, "BlackLevel", 0.0)
+        (status,) = KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "BlackLevelSelector", "Green")
+        (status,) = KYFG_SetCameraValueFloat(cameraHandle, "BlackLevel", 0.0)
+        (status,) = KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "BlackLevelSelector", "Blue")
+        (status,) = KYFG_SetCameraValueFloat(cameraHandle, "BlackLevel", 0.0)
+    except KYException:
+        print("BlackLevel Color not supported!")
+    try:
+        (status,) = KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "GainSelector", "DigitalAll")
+        (status,) = KYFG_SetCameraValueFloat(cameraHandle, "Gain", 1.0)
+    except KYException:
+        print("Gain All not supported!")
+    try:
+        (status,) = KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "GainSelector", "DigitalRed")
+        (status,) = KYFG_SetCameraValueFloat(cameraHandle, "Gain", 1.0)
+        (status,) = KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "GainSelector", "DigitalGreen")
+        (status,) = KYFG_SetCameraValueFloat(cameraHandle, "Gain", 1.0)
+        (status,) = KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "GainSelector", "DigitalBlue")
+        (status,) = KYFG_SetCameraValueFloat(cameraHandle, "Gain", 1.0)
+    except KYException:
+        print("Gain Color not supported!")
+    try:
+        (status,) = KYFG_SetCameraValueBool(cameraHandle, "ChunkModeActive", False)
+    except KYException:
+        print("MetaData not supported!")
+    try:
+        (status,) = KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "ExposureAuto", "Off")
+    except KYException:
+        print("ExposureAuto not supported!")
+    try:
+        (status,) = KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "GainAuto", "Off")
+    except KYException:
+        print("GainAuto not supported!")
+    try:
+        (status,) = KYFG_SetCameraValueBool(cameraHandle, "DefectPixelCorrectionEnable", False)
+    except KYException:
+        print("DefectPixelCorrectionEnable not supported!")
+    try:
+        (status,) = KYFG_SetCameraValueBool(cameraHandle, "FlatFieldCorrectionEnable", False)
+    except KYException:
+        print("FlatFieldCorrectionEnable not supported!")
+    try:
+        (status,) = KYFG_SetCameraValueBool(cameraHandle, "DarkFieldCorrectionEnable", False)
+    except KYException:
+        print("DarkFieldCorrectionEnable not supported!")
+    try:
+        (status,) = KYFG_SetCameraValueInt(cameraHandle, "BinningHorizontal", 1)
+    except KYException:
+        print("BinningHorizontal locked!")
+    try:
+        (status,) = KYFG_SetCameraValueInt(cameraHandle, "BinningVertical", 1)
+    except KYException:
+        print("BinningVertical locked!")
+    try:
+        (status,) = KYFG_SetCameraValueInt(cameraHandle, "DecimationHorizontal", 1)
+    except KYException:
+        print("DecimationHorizontal locked!")
+    try:
+        (status,) = KYFG_SetCameraValueInt(cameraHandle, "DecimationVertical", 1)
+    except KYException:
+        print("DecimationVertical locked!")
+    try:
+        if camera_type == "Color":
+            (status,) = KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "BalanceWhiteAuto", "Off")
+    except KYException:
+        print("BalanceWhiteAuto not supported!")
+    try:
+        (status,) = KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "LUTSelector", "All")
+        (status,) = KYFG_SetCameraValue(cameraHandle, "LUTEnable", False)
+    except KYException:
+        print("LUT not supported!")
+
+    # set full resolution
+    (status, WidthMax) = KYFG_GetCameraValue(cameraHandle, "WidthMax")
+    (status, HeightMax) = KYFG_GetCameraValue(cameraHandle, "HeightMax")
+    (status) = KYFG_SetCameraValue(cameraHandle, "Width", WidthMax)
+    (status) = KYFG_SetCameraValue(cameraHandle, "Height", HeightMax)
+
+    # some features are applied only after camera start/stop. e.g "DefectPixelCorrection"
+    (status,) = KYFG_CameraExecuteCommand(cameraHandle, "AcquisitionStart")
+    time.sleep(1)
+    (status,) = KYFG_CameraExecuteCommand(cameraHandle, "AcquisitionStop")
+
+
 def acquire_one_frame(cameraHandle, datatype, timeout=15):
     """Create a stream, acquire exactly one frame, delete the stream, and return a copied NumPy array."""
     streamStruct = StreamStruct()
@@ -343,18 +460,9 @@ def _numbered_pair_candidates(before_path, after_path, max_index=9):
 
 def resolve_expected_raw_pair(test_dir, configured_before, configured_after,
                               camera_model, width, height):
-    """
-    Resolve a golden RAW pair for a detected camera.
 
-    Priority:
-      1. Exact names supplied by the parametrization.
-      2. Numbered variants of those names (before1/after1, ...).
-      3. Camera-specific names: <camera>_<width>x<height>_before/after.raw.
-      4. Numbered variants of the camera-specific names.
+    # Resolve a golden RAW pair for a detected camera.
 
-    The files are resolved per detected camera so a test folder may contain
-    golden data for several camera models/configurations.
-    """
     fmt = {
         'camera': camera_model,
         'camera_safe': camera_name_for_file(camera_model),
@@ -533,7 +641,19 @@ def CaseRun(args):
                 camera_opened = True
 
                 (status,) = KYFG_SetGrabberValueInt(grabberHandle, "CameraSelector", cameraIndex)
+
+                camera_type = get_camera_type(cameraHandle)
+
+                if camera_type == "Mono":
+                    print(f"camera: {camera_info.deviceModelName} not for debayering")
+                    continue
+
+                camera_load_default_set(cameraHandle)
+                disable_corrections(cameraHandle, camera_type)
+
+                #########################################
                 Reset_camera(cameraHandle, grabberHandle)
+                #########################################
 
                 (status,) = KYFG_SetCameraValueInt(cameraHandle, "Width", width)
                 (status,) = KYFG_SetCameraValueInt(cameraHandle, "Height", height)
@@ -602,6 +722,14 @@ def CaseRun(args):
                           f'for camera PixelFormat {cameraPixelFormat}')
                     return CaseReturnCode.WRONG_PARAM_VALUE
 
+                print("Discarding first frame after changing grabber PixelFormat...")
+                dummy_frame = acquire_one_frame(cameraHandle, debayered_datatype)
+
+                time.sleep(0.2)
+
+                print("Acquiring frame for comparison...")
+                debayered_frame = acquire_one_frame(cameraHandle, debayered_datatype)
+
                 print(f"\nPASS 2: PixelFormat = {grabberPixelFormat}")
                 print("Camera PixelFormat:", KYFG_GetCameraValueStringCopy(cameraHandle, "PixelFormat"))
                 print("Grabber PixelFormat:", KYFG_GetGrabberValueStringCopy(grabberHandle, "PixelFormat"))
@@ -635,6 +763,55 @@ def CaseRun(args):
                         f"Mismatch at index {idx}: "
                         f"actual={real_frame[idx]}, expected={expected_frame[idx]}"
                     )
+
+                diff_mask = real_frame != expected_frame
+
+                diff_3d = diff_mask.reshape(height - 2, width, 3)
+
+                bad_rows = np.where(np.any(diff_3d, axis=(1, 2)))[0]
+
+                if len(bad_rows):
+                    print(
+                        f"Mismatch rows: {bad_rows[0]} ... {bad_rows[-1]}, "
+                        f"total bad rows: {len(bad_rows)}"
+                    )
+
+                real_rgb = real_frame.reshape(height - 2, width, 3)
+                expected_rgb = expected_frame.reshape(height - 2, width, 3)
+
+                for channel in range(3):
+                    real_channel = real_rgb[:, :, channel].astype(np.int32)
+                    expected_channel = expected_rgb[:, :, channel].astype(np.int32)
+
+                    delta = real_channel - expected_channel
+                    mask = delta != 0
+
+                    print(
+                        f"Channel {channel}: "
+                        f"{np.count_nonzero(mask)} different values"
+                    )
+
+                    if np.any(mask):
+                        unique_delta, counts = np.unique(
+                            delta[mask],
+                            return_counts=True
+                        )
+
+                        print(
+                            "  delta values:",
+                            list(zip(unique_delta[:20], counts[:20]))
+                        )
+
+                        positions = np.argwhere(mask)
+
+                        print(
+                            f"  first mismatch: "
+                            f"row={positions[0][0]}, "
+                            f"x={positions[0][1]}, "
+                            f"actual={real_channel[tuple(positions[0])]}, "
+                            f"expected={expected_channel[tuple(positions[0])]}"
+                        )
+
 
                 assert np.array_equal(real_frame, expected_frame), \
                     "Image after debayering is not equal to expected image"
