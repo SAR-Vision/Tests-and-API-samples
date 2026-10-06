@@ -1,4 +1,5 @@
 # Common KAYA imports DO NOT EDIT!!!
+import ctypes
 import sys
 import os
 import argparse
@@ -330,9 +331,11 @@ def CaseRun(args):
         Reset_camera(cameraHandle, grabberHandle)
         #########################################
 
-        (status, fpsMax) = KYFG_GetCameraValueFloat(cameraHandle, "AcquisitionFrameRateMax")
-
-        (status,) = KYFG_SetCameraValueFloat(cameraHandle, "AcquisitionFrameRate", fpsMax*0.95)
+        if KYFG_IsCameraValueImplemented(cameraHandle, "AcquisitionFrameRateMax"):
+            (status, fpsMax) = KYFG_GetCameraValueFloat(cameraHandle, "AcquisitionFrameRateMax")
+            (status,) = KYFG_SetCameraValueFloat(cameraHandle, "AcquisitionFrameRate", fpsMax*0.95)
+        else:
+            (status,) = KYFG_SetCameraValueFloat(cameraHandle, "AcquisitionFrameRate", 150)
         (status, fps) = KYFG_GetCameraValueFloat(cameraHandle, "AcquisitionFrameRate")
         print(f'FPS: {fps}')
 
@@ -368,12 +371,10 @@ def CaseRun(args):
         (status,) = KYFG_StreamBufferCallbackRegister(streamHandle, streamCallbackFunc, None)
         (status,) = KYFG_AuxDataCallbackRegister(grabberHandle, auxCallbackFunc, None)
 
-
         (status,) = KYFG_CameraStart(cameraHandle, streamHandle, 0)
         (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "TimerTriggerSource", 'KY_CONTINUOUS')
 
         waitFortime(5)
-        print(len(stream_timestamp))
         (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "TimerTriggerSource", 'KY_DISABLED')
         (status,) = KYFG_CameraStop(cameraHandle)
 
@@ -397,11 +398,6 @@ def CaseRun(args):
                 print(stream_timestamp[i], aux_timestamps[i])
                 error_count += 1
                 print('error_count', error_count)
-
-        # if len(stream_timestamp) != len(aux_timestamps):
-        #     print("Stream callbacks doesn't equal AUX callbacks")
-        #     error_count += 1
-        #     print('error_count', error_count)
 
     (status,) = KYFG_Close(grabberHandle)
     assert error_count == 0, 'There are errors while test'
