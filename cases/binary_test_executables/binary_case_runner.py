@@ -20,6 +20,7 @@ Arguments unknown to this script are forwarded to the built test executable.
 """
 
 import argparse
+import json
 import os
 import pathlib
 import platform as platform_module
@@ -27,6 +28,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from typing import Iterable, Optional
 from enum import IntEnum
 
@@ -213,11 +215,62 @@ def locate_case_folder(binary_root: pathlib.Path, automation: pathlib.Path) -> t
 
 
 def find_msbuild() -> pathlib.Path:
+    """Reuse the project configuration across separate binary-case processes."""
+    config_path = pathlib.Path(__file__).resolve().parents[2] / "qa_config.json"
+    config = {}
+    if config_path.is_file():
+        with config_path.open(encoding="utf-8-sig") as config_file:
+            config = json.load(config_file)
+        if not isinstance(config, dict):
+            raise ValueError(f"Expected a JSON object in {config_path}")
+
+    # Manually created configs may omit this key or explicitly set it to null.
+    configured_path = config.get("msbuild_path") or ""
+    if isinstance(configured_path, str) and configured_path.strip():
+        msbuild = pathlib.Path(configured_path)
+        if not msbuild.is_absolute():
+            msbuild = config_path.parent / msbuild
+        if msbuild.is_file():
+            msbuild = msbuild.resolve()
+            os.environ["MSBUILD_EXE_PATH"] = str(msbuild)
+            print(f"MSBuild search skipped: using cached path from {config_path}: {msbuild}")
+            return msbuild
+        print(f"Configured MSBuild no longer exists: {msbuild}; searching again")
+
+    print("MSBuild discovery started: no valid cached msbuild_path in qa_config.json")
+    msbuild = discover_msbuild().resolve()
+    if not msbuild.is_file():
+        raise FileNotFoundError(f"Discovered MSBuild does not exist: {msbuild}")
+    config["msbuild_path"] = str(msbuild)
+
+    # Replace atomically so subsequent runners never read a partially written JSON.
+    temporary_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=config_path.parent,
+            prefix="qa_config_", suffix=".tmp", delete=False,
+        ) as config_file:
+            temporary_path = pathlib.Path(config_file.name)
+            json.dump(config, config_file, indent=4, ensure_ascii=False)
+            config_file.write("\n")
+        os.replace(temporary_path, config_path)
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
+
+    os.environ["MSBUILD_EXE_PATH"] = str(msbuild)
+    print(f"Saved MSBuild path to {config_path}: {msbuild}")
+    return msbuild
+
+
+def discover_msbuild() -> pathlib.Path:
     """Find MSBuild without hardcoding a Visual Studio version."""
     env_path = os.environ.get("MSBUILD_EXE_PATH")
     if env_path and pathlib.Path(env_path).is_file():
+        print(f"MSBuild found in MSBUILD_EXE_PATH: {env_path}; PATH/vswhere search skipped")
         return pathlib.Path(env_path)
 
+    print("Searching for MSBuild in PATH and Visual Studio installations...")
     for name in ("MSBuild.exe", "msbuild.exe", "msbuild"):
         found = shutil.which(name)
         if found:
@@ -532,6 +585,14 @@ def normalize_passthrough(passthrough: list[str], device_index: int) -> list[str
     return result
 
 
+def configure_adapter_environment():
+    """Use the same adapter selection for KYFGLib and native MSBuild projects."""
+    with_adapter = os.environ.get("WithAdapter", "").strip() == "1"
+    suffix = "A" if with_adapter else ""
+    os.environ["KYFGLIB_ADAPTER_SUFFIX"] = suffix
+    print(f"Native library: KYFGLib{suffix}_vc141.lib (WithAdapter={'1' if with_adapter else '0'})")
+
+
 def run_binary_case(args, passthrough: list[str]) -> int:
     binary_root = pathlib.Path(__file__).resolve().parent
     automation = normalize_automation_name(args.automation)
@@ -548,6 +609,8 @@ def run_binary_case(args, passthrough: list[str]) -> int:
     device_index = resolve_device_index(args)
     if device_index is None:
         return 0
+
+    configure_adapter_environment()
 
     if not args.noBuild:
         if platform_module.system() == "Windows":

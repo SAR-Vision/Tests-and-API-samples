@@ -18,6 +18,7 @@
 #include <chrono>
 #include <valarray>
 #include <atomic>
+#include <cstdlib>
 #include <algorithm>
 
 #ifdef __linux__
@@ -111,6 +112,7 @@ void* _aligned_malloc(size_t size, size_t alignment)
 #endif // #ifdef __linux__
 
 int attachDebugger = 0;
+bool unattended = false;
 int device_index = 0;
 int nCallbacksMaxCount = 10000;
 int nAuxWaitTimeSec = 5;
@@ -269,7 +271,7 @@ int StartCamera(CameraInfo camera)
 
 void CloseGrabbers()
 {
-    for(FrameGrabberInfo info : frameGrabberInfoList)
+    for(FrameGrabberInfo &info : frameGrabberInfoList)
     {
         if(INVALID_FGHANDLE !=info.handle)
         {
@@ -280,16 +282,21 @@ void CloseGrabbers()
             else
             {
                 printf("Grabber #%d closed\n", info.index);
+                info.handle = INVALID_FGHANDLE;
             }
         }
     }
 }
 
-void Close(int returnCode)
+[[noreturn]] void Close(int returnCode)
 {
-    printf("Input any char to exit\n");
-    BlockingInput();
-    exit(returnCode);
+    CloseGrabbers();
+    if (!unattended)
+    {
+        printf("Input any char to exit\n");
+        BlockingInput();
+    }
+    std::exit(returnCode);
 }
 template<typename T>
 void printStatistic(const std::valarray<T> &_periodsArray, const std::string& name)
@@ -351,7 +358,6 @@ void AuxDataCallbackImpl(KYFG_AUX_DATA* pData, void* context)
     }
 }
 
-
 int ConnectToGrabber(FrameGrabberInfo &infoGrabber)
 {
     int64_t dmaQueuedBufferCapable;
@@ -363,6 +369,7 @@ int ConnectToGrabber(FrameGrabberInfo &infoGrabber)
     else
     {
         printf("Could not connect to grabber #%d\n", infoGrabber.index);
+        return 0xff;
     }
 
     dmaQueuedBufferCapable = KYFG_GetGrabberValueInt(infoGrabber.handle, DEVICE_QUEUED_BUFFERS_SUPPORTED);
@@ -374,9 +381,11 @@ int ConnectToGrabber(FrameGrabberInfo &infoGrabber)
     interprocessSharingCapable = KYFG_GetGrabberValueInt(infoGrabber.handle, DEVICE_INTERPROCESS_SHARING_SUPPORTED);
     printf("Grabber #%d %s interprocess sharing\n", infoGrabber.index, interprocessSharingCapable ? "supports" : "does not support");
 
-    // Tune background monitoring thread:
-    KYFG_SetGrabberValueInt(infoGrabber.handle, "MonitoringStepsMask", 0);
+    return 0;
+}
 
+int MeasureGrabber(FrameGrabberInfo &infoGrabber)
+{
     if (!(nAuxWaitTimeSec > 0))
     {
         std::cout << "nAuxWaitTimeSec is not greater than 0, I will not measure aux callbacks" << std::endl;
@@ -449,14 +458,14 @@ int ConnectToGrabber(FrameGrabberInfo &infoGrabber)
             auxCallbackTimestampPeriodsChrono[i] = infoGrabber.m_AuxCallbackTimestampsChrono[i + 1] - infoGrabber.m_AuxCallbackTimestampsChrono[i];
         }
 
-        std::valarray<uint64_t> pureTimestampsHw(nPeriods+1);
-        for (size_t i = 0; i < nPeriods+1; i++)
+        std::valarray<uint64_t> pureTimestampsHw(nPeriods + 1);
+        for (size_t i = 0; i < nPeriods + 1; i++)
         {
             KYFG_DeviceDirectHardwareRead(infoGrabber.handle, 0x180, &(pureTimestampsHw[i]), sizeof(uint64_t));
             //KYFG_DeviceDirectHardwareRead(infoGrabber.handle, 0x180, &(pureTimestampsHw[i]), sizeof(uint32_t));
             //KYFG_DeviceDirectHardwareRead(infoGrabber.handle, 0x184, (uint32_t*)(&(pureTimestampsHw[i])) + 1, sizeof(uint32_t));
         }
-        for (size_t i = 0; i < nPeriods+1; i++)
+        for (size_t i = 0; i < nPeriods + 1; i++)
         {
             pureTimestampsHw[i] *= 8;
         }
@@ -466,11 +475,11 @@ int ConnectToGrabber(FrameGrabberInfo &infoGrabber)
             pureTimestampPeriodsHw[i] = pureTimestampsHw[i + 1] - pureTimestampsHw[i];
         }
 
-        printStatistic(auxTimestampPeriodsHw,             "auxTimestampPeriodsHw             ");
-        printStatistic(auxInterruptTimestampPeriodsHw,    "auxInterruptTimestampPeriodsHw    ");
-        printStatistic(auxCallbackTimestampPeriodsHw,     "auxCallbackTimestampPeriodsHw     ");
+        printStatistic(auxTimestampPeriodsHw, "auxTimestampPeriodsHw             ");
+        printStatistic(auxInterruptTimestampPeriodsHw, "auxInterruptTimestampPeriodsHw    ");
+        printStatistic(auxCallbackTimestampPeriodsHw, "auxCallbackTimestampPeriodsHw     ");
         printStatistic(auxCallbackTimestampPeriodsChrono, "auxCallbackTimestampPeriodsChrono ");
-        printStatistic(pureTimestampPeriodsHw,            "pureTimestampPeriodsHw            ");
+        printStatistic(pureTimestampPeriodsHw, "pureTimestampPeriodsHw            ");
 
         // Aux Latencies
         std::cout << "--------------------" << std::endl;
@@ -484,23 +493,23 @@ int ConnectToGrabber(FrameGrabberInfo &infoGrabber)
         {
             auxLatenciesCallbackToInterruptHW[i] = infoGrabber.m_AuxCallbackTimestampsHw[i] - infoGrabber.m_AuxInterruptTimestampsHw[i];
         }
-        printStatistic(auxLatenciesInterruptToFrameHW,    "AUX Latencies (Interrupt - HwStamps) HW ");
+        printStatistic(auxLatenciesInterruptToFrameHW, "AUX Latencies (Interrupt - HwStamps) HW ");
         printStatistic(auxLatenciesCallbackToInterruptHW, "AUX Latencies (Callback - Interrupt) HW ");
 
         std::ofstream auxCsvFile;
         auxCsvFile.open("case_3632_aux.csv", std::ofstream::out | std::ofstream::trunc);
-        auxCsvFile << "auxTimestampPeriodsHw" 
-                   << "," << "auxInterruptTimestampPeriodsHw" 
-                   << "," << "auxCallbackTimestampPeriodsHw" 
-                   << "," << "pureTimestampPeriodsHw" 
-                   << "\n";
+        auxCsvFile << "auxTimestampPeriodsHw"
+            << "," << "auxInterruptTimestampPeriodsHw"
+            << "," << "auxCallbackTimestampPeriodsHw"
+            << "," << "pureTimestampPeriodsHw"
+            << "\n";
         for (size_t i = 0; i < nPeriods; i++)
         {
-            auxCsvFile << auxTimestampPeriodsHw[i] 
-                       << "," << auxInterruptTimestampPeriodsHw[i] 
-                       << "," << auxCallbackTimestampPeriodsHw[i] 
-                       << "," << pureTimestampPeriodsHw[i]
-                       << "\n";
+            auxCsvFile << auxTimestampPeriodsHw[i]
+                << "," << auxInterruptTimestampPeriodsHw[i]
+                << "," << auxCallbackTimestampPeriodsHw[i]
+                << "," << pureTimestampPeriodsHw[i]
+                << "\n";
         }
         auxCsvFile.close();
 
@@ -516,30 +525,6 @@ int ConnectToGrabber(FrameGrabberInfo &infoGrabber)
 
 void measureStreams()
 {
-    // Detect and connect camera(s)
-    printf("\nCamera detection\n");
-
-    for (FrameGrabberInfo &info : frameGrabberInfoList)
-    {
-        int nDetectedCameras = _countof(camHandleArray[info.index]);
-
-        if (FGSTATUS_OK != KYFG_UpdateCameraList(info.handle, camHandleArray[info.index], &nDetectedCameras))
-        {
-            printf("Camera detect error. Please try again\n");
-            continue;
-        }
-
-        printf("Number of cameras connected to the PCI device #%d: %d\n", info.index, nDetectedCameras);
-
-        for (int i = 0; i < nDetectedCameras; ++i)
-        {
-            info.cameras.emplace_back(camHandleArray[info.index][i], INVALID_STREAMHANDLE);
-            std::cout << "Camera found at port " << i << std::endl;
-        }
-    }//for (FrameGrabberInfo &info : frameGrabberInfoList) KYFG_UpdateCameraList
-
-    printf("\nCamera connection:\n");
-
     for (FrameGrabberInfo &info : frameGrabberInfoList)
     {
         int cameraIndex = 0;
@@ -756,6 +741,7 @@ int main(int argc, char **argv)
     (
         {
             { "--attach_debugger",      "0"},      // do not wait for attaching debugger
+            { "--unattended",          "0"},      // skip interactive prompts when set to 1
             { "--device_index",         "0"},      // use 0-th PCI device
             { "--callbacks_maxcount",   "10000" }, // collect maximum 10000 callbacks
             { "--aux_wait_time_sec",    "30" },    // wait 30 seconds to collect AUX callbacks (for each grabber sequentially)
@@ -768,13 +754,15 @@ int main(int argc, char **argv)
     options.ReadOptions(argc, argv);
     options.PrintOptions();
 
+    unattended = std::stoi(options.getCmdOption("--unattended")) != 0;
+
     // "--attach_debugger"
     const std::string &sattachDebugger = options.getCmdOption("--attach_debugger");
     if (!sattachDebugger.empty())
     {
         attachDebugger = std::stoi(sattachDebugger);
     }
-    if (attachDebugger)
+    if (attachDebugger && !unattended)
     {
         printf("Input any char to continue (1-st chance to attach a debugger)\n"); 
         BlockingInput();
@@ -857,7 +845,7 @@ int main(int argc, char **argv)
     if(!nKayaDevicesCount)
     {
         printf("No PCI devices found\n");
-        Close(0);
+        Close(2);
     }
 
     for(int i = 0; i < nKayaDevicesCount; i++)
@@ -867,19 +855,58 @@ int main(int argc, char **argv)
         deviceInfo.version = 4;
         if (FGSTATUS_OK == KY_DeviceInfo(i, &deviceInfo) && i == device_index)
         {
-            if (deviceInfo.m_Protocol == KY_DEVICE_PROTOCOL_CoaXPress)
+            /*if (deviceInfo.m_Protocol == KY_DEVICE_PROTOCOL_CoaXPress)
             {
                 frameGrabberInfoList.emplace_back(i, name, INVALID_FGHANDLE);
                 std::cout << "FG detected. index=" << i << ", name=" << name << std::endl;
-            
-            }
+            }*/
+
+            frameGrabberInfoList.emplace_back(i, name, INVALID_FGHANDLE);
+            std::cout << "FG detected. index=" << i << ", name=" << name << std::endl;
         }
-        
     }
 
     for (FrameGrabberInfo &info : frameGrabberInfoList)
     {
-        ConnectToGrabber(info);
+        int ret = ConnectToGrabber(info);
+        if (ret)
+        {
+            Close(ret);
+        }
+    }
+
+    // Detect camera(s)
+    printf("\nCamera detection...\n");
+
+    for (FrameGrabberInfo &info : frameGrabberInfoList)
+    {
+        int nDetectedCameras = _countof(camHandleArray[info.index]);
+
+        FGSTATUS fgStatus = KYFG_UpdateCameraList(info.handle, camHandleArray[info.index], &nDetectedCameras);
+        if (FGSTATUS_OK != fgStatus)
+        {
+            printf("Camera detection error occured\n");
+            Close(fgStatus);
+        }
+
+        printf("Number of cameras connected to the PCI device #%d: %d\n", info.index, nDetectedCameras);
+
+        if (0 >= nDetectedCameras)
+        {
+            printf("No cameras detected\n");
+            Close(2);
+        }
+
+        for (int i = 0; i < nDetectedCameras; ++i)
+        {
+            info.cameras.emplace_back(camHandleArray[info.index][i], INVALID_STREAMHANDLE);
+            std::cout << "Camera found at port " << i << std::endl;
+        }
+    }//for (FrameGrabberInfo &info : frameGrabberInfoList) KYFG_UpdateCameraList
+
+    for (FrameGrabberInfo &info : frameGrabberInfoList)
+    {
+        MeasureGrabber(info);
     }
 
     if (nStreamsWaitTimeSec > 0)
@@ -891,8 +918,5 @@ int main(int argc, char **argv)
         std::cout << "nStreamsWaitTimeSec is not greater than 0, I will not measure streams" << std::endl;
     }
 
-    // Close grabbers
-    CloseGrabbers();
-    //Close(0);
-    exit(0);
+    Close(0);
 } // int main(int argc, char **argv)
