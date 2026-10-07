@@ -35,6 +35,7 @@ def CaseArgumentParser():
     # Other arguments needed for this specific case, PARSE CASE SPECIFIC ARGUMENTS UNDER THIS LINE:
     return parser
 
+
 def CaseRun(args):
     print(f'\nEntering CaseRun({args}) (use -h or --help to print available parameters and exit)...')
 
@@ -91,57 +92,52 @@ class CaseReturnCode(IntEnum):
 
 # 1. Set log paths
 log_path = r"C:\Users\Public\Documents\SIGVERIF.TXT"
-print("log path:", log_path)
 
 
 # 2. Run SigVerif.exe
-subprocess.Popen(["sigverif.exe"])
-print("[*] Starting SigVerif...")
-time.sleep(1)  # Give it a few seconds to open
+def run_sigverif_scan():
+    print("log path:", log_path)
 
+    subprocess.Popen(["sigverif.exe"])
+    print("[*] Starting SigVerif...")
+    time.sleep(1)
 
-# 3. Simulate pressing "TAB" and "ENTER" to start the scan
-print("[*] Trying to start scan automatically...")
+    print("[*] Trying to start scan automatically...")
+    pyautogui.moveTo(1000, 500)
+    pyautogui.press('enter')
+    print("[*] Scan started... waiting for it to complete.")
 
-# Move mouse to center of screen
-pyautogui.moveTo(1000, 500)  # Example coordinates, you may need to adjust
+    time.sleep(40)
 
-# Press "ENTER" to click Start
-pyautogui.press('enter')
-print("[*] Scan started... waiting for it to complete.")
+    print("[*] Waiting for results window to appear...")
+    start_time = time.time()
+    timeout = 120
 
-# 4. Wait for log file to appear
-time.sleep(40)
+    while True:
+        result_windows = [
+            w for w in gw.getWindowsWithTitle('Signature Verification Results')
+            if w.visible
+        ]
+        if result_windows:
+            print("[*] Results window detected.")
+            break
 
-# Wait for "Signature Verification Results" window to appear
-# print("[*] Waiting for results window to appear...")
-# start_time = time.time()
-# timeout = 120  # Max wait in seconds
-#
-# while True:
-#     result_windows = [w for w in gw.getWindowsWithTitle('Signature Verification Results') if w.visible]
-#     if result_windows:
-#         print("[*] Results window detected.")
-#         break
-#     if time.time() - start_time > timeout:
-#         raise TimeoutError("Timed out waiting for results window.")
-#     time.sleep(1)
+        if time.time() - start_time > timeout:
+            raise TimeoutError("Timed out waiting for results window.")
 
-# Give it a moment before pressing enter
-time.sleep(1)
-print("[*] SigVerif scan completed.")
+        time.sleep(1)
 
-# 5. Close "Signature Verification Results" window
-pyautogui.press('enter')
-time.sleep(2)
-# print("[*] Close 'Signature Verification Results' window.")
+    time.sleep(1)
+    print("[*] SigVerif scan completed.")
 
+    pyautogui.press('enter')
+    time.sleep(2)
 
-# 6. Press on "Close": tab, enter - it will close sigverif window
-pyautogui.press('tab')
-time.sleep(3)
-pyautogui.press('enter')
-print("[*] sigverif was closed")
+    pyautogui.press('tab')
+    time.sleep(3)
+    pyautogui.press('enter')
+
+    print("[*] SigVerif was closed")
 
 
 # 7. Read the log file
@@ -192,9 +188,14 @@ def check_log():
 if __name__ == "__main__":
     try:
         print("case 2866 Process ID:", os.getpid())
+
+        run_sigverif_scan()
+
         return_code = check_log()
         print(f'Case return code: {return_code}')
+
     except Exception as ex:
         print(f"Exception of type {type(ex)} occurred: {str(ex)}")
         exit(-200)
+
     exit(return_code)

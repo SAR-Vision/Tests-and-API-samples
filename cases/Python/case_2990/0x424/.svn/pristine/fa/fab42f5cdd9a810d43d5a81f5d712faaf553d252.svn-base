@@ -1,0 +1,790 @@
+{
+    // Komodo II CXP over Fiber Bridge Frame Grabber
+
+    "VP2": {
+
+        //////////////////////////////////////////////////
+        // CONTROLLERS
+        //////////////////////////////////////////////////
+        
+        "SpeedConfigControllers": [
+            {
+                "SpeedConfigControllersType": "Dummy", // "Dummy"/"MacomHighSpeed"/"MacomLowSpeed"/"MacomHighLowSpeed"/"FPGATransceiverPhyII"
+                "base_bar": 0,
+                "base_address": "0",
+                "csr_speed": 0
+            }
+        ],
+        
+        "CommandControllers": [
+            {
+                // AbstarctHWController part:
+                "base_bar": 2,
+                "base_address": "0xA000",
+
+                // CommandController extention:
+                "command_base_tx": "0xA000",
+                "command_base_rx": "0xA040",
+
+                "type": "CXP_V2",
+                "channel": 0
+            },
+            {
+                // AbstarctHWController part:
+                "base_bar": 2,
+                "base_address": "0xA080",
+
+                // CommandController extention:
+                "command_base_tx": "0xA080",
+                "command_base_rx": "0xA0C0",
+
+                "type": "CXP_V2",
+                "channel": 1
+            },
+            {
+                // AbstarctHWController part:
+                "base_bar": 2,
+                "base_address": "0xA100",
+
+                // CommandController extention:
+                "command_base_tx": "0xA100",
+                "command_base_rx": "0xA140",
+
+                "type": "CXP_V2",
+                "channel": 2
+            },
+            {
+                // AbstarctHWController part:
+                "base_bar": 2,
+                "base_address": "0xA180",
+
+                // CommandController extention:
+                "command_base_tx": "0xA180",
+                "command_base_rx": "0xA1C0",
+
+                "type": "CXP_V2",
+                "channel": 3
+            }
+        ],
+        
+        "TemperatureController": {
+            "base_address": "0x5008",
+            "base_bar": 2,
+            "type": "Gen2" // Gen1 - Calculation formula for Device type I, Gen2 - Calculation formula for Device type II
+        },
+        
+        "FanController": { // Valid only if bit 21 of system capabilities is set (SYSTEM_CAPABLE_FAN_CONTROLLER)
+            "base_bar": 0,
+            "base_address": "0x6000",
+            "capabilities_address": "0x0",
+            "formula_type": 2 // 1 - Calculation formula for Device type I, 2 - Calculation formula for Device type II
+        },
+    
+        "DMAControllers": [
+            {
+                /* enum class Direction{UNDEFINED = -1, HOST2DEVICE = 0, DEVICE2HOST = 1}; */
+                "base_bar": 2,
+                "base_address": "0x8000",
+                "channel_direction": 1,
+                "type": "SGDMA"
+            },
+            {
+                "base_bar": 2,
+                "base_address": "0x8100",
+                "channel_direction": 1,
+                "type": "SGDMA"
+            },
+            {
+                "base_bar": 2,
+                "base_address": "0x8200",
+                "channel_direction": 1,
+                "type": "SGDMA"
+            },
+            {
+                "base_bar": 2,
+                "base_address": "0x8300",
+                "channel_direction": 1,
+                "type": "SGDMA"
+            }
+        ],
+
+        "MetadataControllers": [
+            {
+                "base_bar": 2,
+                "base_address": "0x8040",
+                "type": "META_V1",
+                "clock_frequency": 125.0,
+                "clock_frequency_source": null // Clock frequency source reserved for future enhancements
+            },
+            {
+                "base_bar": 2,
+                "base_address": "0x8140",
+                "type": "META_V1",
+                "clock_frequency": 125.0,
+                "clock_frequency_source": null
+            },
+            {
+                "base_bar": 2,
+                "base_address": "0x8240",
+                "type": "META_V1",
+                "clock_frequency": 125.0,
+                "clock_frequency_source": null
+            },
+            {
+                "base_bar": 2,
+                "base_address": "0x8340",
+                "type": "META_V1",
+                "clock_frequency": 125.0,
+                "clock_frequency_source": null
+            }
+        ],
+        
+        "GlobalInterruptController": {
+            "base_bar": 2,
+            "base_address": "0x0000"
+        },
+        
+        "InterruptControllers": [
+            {
+                "base_bar": 2,
+                "base_address": "0x8000",
+                "interrupt": 1,
+                "type": "SGDMA"
+            },
+            {
+                "base_bar": 2,
+                "base_address": "0x8100",
+                "interrupt": 5,
+                "type": "SGDMA"
+            },
+            {
+                "base_bar": 2,
+                "base_address": "0x8200",
+                "interrupt": 7,
+                "type": "SGDMA"
+            },
+            {
+                "base_bar": 2,
+                "base_address": "0x8300",
+                "interrupt": 9,
+                "type": "SGDMA"
+            },
+            {
+                "base_bar": 2,
+                "base_address": "0x01C0",
+                "interrupt": 11,
+                "type": "GPIO"
+            },
+            {
+                "base_bar": 2,
+                "base_address": "0xA000",
+                "interrupt": 16,
+                "type": "CMD_CXPv2"
+            },
+            {
+                "base_bar": 2,
+                "base_address": "0xA080",
+                "interrupt": 17,
+                "type": "CMD_CXPv2"
+            },
+            {
+                "base_bar": 2,
+                "base_address": "0xA100",
+                "interrupt": 18,
+                "type": "CMD_CXPv2"
+            },
+            {
+                "base_bar": 2,
+                "base_address": "0xA180",
+                "interrupt": 19,
+                "type": "CMD_CXPv2"
+            }
+        ],
+        
+        "HostIPControllers": [
+            {
+                "base_bar": 0,
+                "base_address": "0x410000",
+                "supported_speeds": [
+                    "0x28", // LINK_SPEED_CXP1   1.25  Gbps
+                    "0x30", // LINK_SPEED_CXP2   2.5   Gbps
+                    "0x38", // LINK_SPEED_CXP3   3.125 Gbps
+                    "0x40", // LINK_SPEED_CXP5   5     Gbps
+                    "0x48", // LINK_SPEED_CXP6   6.25  Gbps
+                    "0x50", // LINK_SPEED_CXP10  10    Gbps
+                    "0x58" // LINK_SPEED_CXP12  12.5  Gbps
+                ],
+                "COAXPRESS_VERSIONS_SUPPORTED": "0x7", // COAXPRESS_REVISION_2_0_SUPPORTED(0x4) | COAXPRESS_REVISION_1_1_SUPPORTED(0x2) | COAXPRESS_REVISION_1_0_SUPPORTED(0x1)
+                "channel": 0,
+                "HostIPControllerType": "CXP_V1"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x411000",
+                "supported_speeds": [
+                    "0x28", // LINK_SPEED_CXP1   1.25  Gbps
+                    "0x30", // LINK_SPEED_CXP2   2.5   Gbps
+                    "0x38", // LINK_SPEED_CXP3   3.125 Gbps
+                    "0x40", // LINK_SPEED_CXP5   5     Gbps
+                    "0x48", // LINK_SPEED_CXP6   6.25  Gbps
+                    "0x50", // LINK_SPEED_CXP10  10    Gbps
+                    "0x58" // LINK_SPEED_CXP12  12.5  Gbps
+                ],
+                "COAXPRESS_VERSIONS_SUPPORTED": "0x7", // COAXPRESS_REVISION_2_0_SUPPORTED(0x4) | COAXPRESS_REVISION_1_1_SUPPORTED(0x2) | COAXPRESS_REVISION_1_0_SUPPORTED(0x1)
+                "channel": 1,
+                "HostIPControllerType": "CXP_V1"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x412000",
+                "supported_speeds": [
+                    "0x28", // LINK_SPEED_CXP1   1.25  Gbps
+                    "0x30", // LINK_SPEED_CXP2   2.5   Gbps
+                    "0x38", // LINK_SPEED_CXP3   3.125 Gbps
+                    "0x40", // LINK_SPEED_CXP5   5     Gbps
+                    "0x48", // LINK_SPEED_CXP6   6.25  Gbps
+                    "0x50", // LINK_SPEED_CXP10  10    Gbps
+                    "0x58" // LINK_SPEED_CXP12  12.5  Gbps
+                ],
+                "COAXPRESS_VERSIONS_SUPPORTED": "0x7", // COAXPRESS_REVISION_2_0_SUPPORTED(0x4) | COAXPRESS_REVISION_1_1_SUPPORTED(0x2) | COAXPRESS_REVISION_1_0_SUPPORTED(0x1)
+                "channel": 2,
+                "HostIPControllerType": "CXP_V1"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x413000",
+                "supported_speeds": [
+                    "0x28", // LINK_SPEED_CXP1   1.25  Gbps
+                    "0x30", // LINK_SPEED_CXP2   2.5   Gbps
+                    "0x38", // LINK_SPEED_CXP3   3.125 Gbps
+                    "0x40", // LINK_SPEED_CXP5   5     Gbps
+                    "0x48", // LINK_SPEED_CXP6   6.25  Gbps
+                    "0x50", // LINK_SPEED_CXP10  10    Gbps
+                    "0x58" // LINK_SPEED_CXP12  12.5  Gbps
+                ],
+                "COAXPRESS_VERSIONS_SUPPORTED": "0x7", // COAXPRESS_REVISION_2_0_SUPPORTED(0x4) | COAXPRESS_REVISION_1_1_SUPPORTED(0x2) | COAXPRESS_REVISION_1_0_SUPPORTED(0x1)
+                "channel": 3,
+                "HostIPControllerType": "CXP_V1"
+            }
+        ],
+        
+        "StreamArbiterControllers": [ // Valid only if bit 22 of system capabilities is set
+            {
+                "base_bar": 0,
+                "base_address": "0x420000",
+                "capabilities_address": "0x0", // currently all zeros
+                "mask": "0x4",
+                "link_order": "0x8",
+                "reset_addr": "0xC",
+                "StreamArbiterControllerType": "CXP_V1"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x421000",
+                "capabilities_address": "0x0", // currently all zeros
+                "mask": "0x4",
+                "link_order": "0x8",
+                "reset_addr": "0xC",
+                "StreamArbiterControllerType": "CXP_V1"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x422000",
+                "capabilities_address": "0x0", // currently all zeros
+                "mask": "0x4",
+                "link_order": "0x8",
+                "reset_addr": "0xC",
+                "StreamArbiterControllerType": "CXP_V1"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x423000",
+                "capabilities_address": "0x0", // currently all zeros
+                "mask": "0x4",
+                "link_order": "0x8",
+                "reset_addr": "0xC",
+                "StreamArbiterControllerType": "CXP_V1"
+            }
+        ],
+
+        "StreamDecoderControllers": [
+            {
+                "base_bar": 0,
+                "base_address": "0x402000",
+                "StreamDecoderControllersType": "CXP_V1"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x403000",
+                "StreamDecoderControllersType": "CXP_V1"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x404000",
+                "StreamDecoderControllersType": "CXP_V1"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x405000",
+                "StreamDecoderControllersType": "CXP_V1"
+            }
+        ],
+
+        "StreamImageProcessingControllers": [
+            {
+                "base_bar": 0,
+                "base_address": "0x500000",
+                "StreamImageProcessingControllerType": "ISP_V1"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x500100",
+                "StreamImageProcessingControllerType": "ISP_V1"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x500200",
+                "StreamImageProcessingControllerType": "ISP_V1"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x500300",
+                "StreamImageProcessingControllerType": "ISP_V1"
+            }
+        ],
+        
+        "LinkTriggerControllers": [
+            {
+                "base_bar": 0,
+                "base_address": "0x72200"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x72240"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x72280"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x722C0"
+            }
+        ],
+
+        "TimerTriggerControllers": [
+            {
+                "base_bar": 0,
+                "base_address": "0x72400"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x72440"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x72480"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x724C0"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x72500"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x72540"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x72580"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x725C0"
+            }
+        ],
+
+        "EncoderTriggerControllers": [
+            {
+                "base_bar": 0,
+                "base_address": "0x72600"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x72640"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x72680"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x726C0"
+            }
+        ],
+
+        "StreamTriggerControllers": [
+            {
+                "base_bar": 0,
+                "base_address": "0x72000"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x72040"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x72080"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x720C0"
+            }
+        ],
+        
+        "TriggerNControllers": [
+            {
+                "base_bar": 0,
+                "base_address": "0x8040"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x8080"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x80C0"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x8100"
+            }
+        ],
+        
+        "FECStatisticsControllers": [
+            {
+                "base_bar": 0,
+                "base_address": "0x60000",
+                "FECStatisticsController_Type": "Transceiver"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x61000",
+                "FECStatisticsController_Type": "Transceiver"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x62000",
+                "FECStatisticsController_Type": "Transceiver"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x63000",
+                "FECStatisticsController_Type": "Transceiver"
+            }
+        ],
+
+        //////////////////////////////////////////////////
+        // DRIVERS
+        //////////////////////////////////////////////////
+
+        "CommandDriver": {
+            "CommandChannelDrivers": [
+                {
+                    "interrupt_number": 16,
+                    "command_controller_channel": 0
+                },
+                {
+                    "interrupt_number": 17,
+                    "command_controller_channel": 1
+                },
+                {
+                    "interrupt_number": 18,
+                    "command_controller_channel": 2
+                },
+                {
+                    "interrupt_number": 19,
+                    "command_controller_channel": 3
+                }
+            ]
+        },
+
+        "DMADriver": {
+            "DMAChannelDrivers": [
+                {
+                    "interrupt_number": 1,
+                    "dma_controller_index": 0,
+                    "metadata_controller_dma_index": 0
+                },
+                {
+                    "interrupt_number": 5,
+                    "dma_controller_index": 1,
+                    "metadata_controller_dma_index": 1
+                },
+                {
+                    "interrupt_number": 7,
+                    "dma_controller_index": 2,
+                    "metadata_controller_dma_index": 2
+                },
+                {
+                    "interrupt_number": 9,
+                    "dma_controller_index": 3,
+                    "metadata_controller_dma_index": 3
+                }
+            ]
+        },
+
+        "HostIPDriver": {
+            "HostIPChannelDrivers": [
+                {
+                    "host_ip_controller_channel": 0
+                },
+                {
+                    "host_ip_controller_channel": 1
+                },
+                {
+                    "host_ip_controller_channel": 2
+                },
+                {
+                    "host_ip_controller_channel": 3
+                }
+            ]
+        },
+
+        "SpeedConfigDriver": {
+            "SpeedConfigDrivers": [
+                {
+                    "controller_index": 0,
+                    "channel_select_id": 0
+                },
+                {
+                    "controller_index": 0,
+                    "channel_select_id": 1
+                },
+                {
+                    "controller_index": 0,
+                    "channel_select_id": 2
+                },
+                {
+                    "controller_index": 0,
+                    "channel_select_id": 3
+                }
+            ]
+        },
+        
+        "LinkTriggersDriver": {
+            "LinkTriggersChannelDrivers": [
+                {
+                    "link_trigger_channel": 0
+                },
+                {
+                    "link_trigger_channel": 1
+                },
+                {
+                    "link_trigger_channel": 2
+                },
+                {
+                    "link_trigger_channel": 3
+                }
+            ]
+        },
+
+        "TimerTriggersDriver": {
+            "TimerTriggersChannelDrivers": [
+                {
+                    "timer_trigger_channel": 0
+                },
+                {
+                    "timer_trigger_channel": 1
+                },
+                {
+                    "timer_trigger_channel": 2
+                },
+                {
+                    "timer_trigger_channel": 3
+                },
+                {
+                    "timer_trigger_channel": 4
+                },
+                {
+                    "timer_trigger_channel": 5
+                },
+                {
+                    "timer_trigger_channel": 6
+                },
+                {
+                    "timer_trigger_channel": 7
+                }
+            ]
+        },
+
+        "EncoderTriggersDriver": {
+            "EncoderTriggersChannelDrivers": [
+                {
+                    "encoder_trigger_channel": 0
+                },
+                {
+                    "encoder_trigger_channel": 1
+                },
+                {
+                    "encoder_trigger_channel": 2
+                },
+                {
+                    "encoder_trigger_channel": 3
+                }
+            ]
+        },
+
+        "StreamTriggersDriver": {
+            "StreamTriggersChannelDrivers": [
+                {
+                    "stream_trigger_channel": 0
+                },
+                {
+                    "stream_trigger_channel": 1
+                },
+                {
+                    "stream_trigger_channel": 2
+                },
+                {
+                    "stream_trigger_channel": 3
+                }
+            ]
+        },
+        
+        "TriggerNDriver": {
+            "TriggerNChannelDrivers": [
+                {
+                    "trigger_n_channel": 0
+                },
+                {
+                    "trigger_n_channel": 1
+                },
+                {
+                    "trigger_n_channel": 2
+                },
+                {
+                    "trigger_n_channel": 3
+                }
+            ]
+        },
+        
+        "FECStatisticsDriver": {
+            "FECStatisticsChannelDrivers": [
+                {
+                    "fec_statistics_channel": 0
+                },
+                {
+                    "fec_statistics_channel": 1
+                },
+                {
+                    "fec_statistics_channel": 2
+                },
+                {
+                    "fec_statistics_channel": 3
+                }
+            ]
+        }
+    },
+    // END of VP2 Section
+    
+    "File version": 60600,
+
+    // Komodo II CXP over Fiber Bridge Frame Grabber
+     "CommandInterrupts": [
+         {
+             "bar": 2
+             ,"command_base_tx": "0xA000"
+             ,"command_base_rx": "0xA040"
+             ,"interrupt": 16
+         
+         },
+         {
+             "bar": 2
+             ,"command_base_tx": "0xA080"
+             ,"command_base_rx": "0xA0C0"
+             ,"interrupt": 17
+         
+         },
+         {
+             "bar": 2
+             ,"command_base_tx": "0xA100"
+             ,"command_base_rx": "0xA140"
+             ,"interrupt": 18
+         
+         },
+         {
+             "bar": 2
+             ,"command_base_tx": "0xA180"
+             ,"command_base_rx": "0xA1C0"
+             ,"interrupt": 19
+         
+         }
+     ]
+     ,"ArbiterController":// Valid only if bit 22 of system capabilities is set
+     {
+         "bases": [
+              "0x420000",
+              "0x421000",
+              "0x422000",
+              "0x423000",
+              "0x424000",
+              "0x425000",
+              "0x426000",
+              "0x427000"
+         ]
+         ,"capabilities_address": "0x0"// currently all zeros 
+         ,"Mask": "0x4"
+         ,"LinkOrder": "0x8"
+         ,"ResetAddr": "0xC"
+     }
+     ,"HostIPController":  
+     {
+         "bases": [ 
+              "0x410000",
+              "0x411000",
+              "0x412000",
+              "0x413000",
+              "0x414000",
+              "0x415000",
+              "0x416000",
+              "0x417000"
+         ]
+         
+         ,"supported_speeds": [
+              "0x28" // LINK_SPEED_CXP1   1.25  Gbps
+             ,"0x30" // LINK_SPEED_CXP2   2.5   Gbps
+             ,"0x38" // LINK_SPEED_CXP3   3.125 Gbps
+             ,"0x40" // LINK_SPEED_CXP5   5     Gbps
+             ,"0x48" // LINK_SPEED_CXP6   6.25  Gbps
+             ,"0x50" // LINK_SPEED_CXP10  10    Gbps
+             ,"0x58" // LINK_SPEED_CXP12  12.5  Gbps
+         ]
+         
+         ,"COAXPRESS_VERSIONS_SUPPORTED" : "0x7" // COAXPRESS_REVISION_2_0_SUPPORTED(0x4) | COAXPRESS_REVISION_1_1_SUPPORTED(0x2) | COAXPRESS_REVISION_1_0_SUPPORTED(0x1)
+     }
+      ,"IOController": 
+     {
+         "base": "0x60000" 
+     }
+     ,"FEC_Statistics": {
+        "type": "TranscieverReconfigAltera"  // "ExternalElasticBufferFEC"/ "TranscieverReconfigAltera"
+        ,"bar": 0
+        , "bases": [
+            "0x60000", // channel 0
+            "0x61000", // channel 1
+            "0x62000", // channel 2
+            "0x63000"  // Chnanel 3
+        ]
+        , "FEC_CorrectedPackets": "0xDC" // 0xDF..0xDC each reg 1 byte
+        , "FEC_CorruptedPackets": "0xE0" // 0xE3..0xE0 each reg 1 byte
+    }    
+    ,"CXP_LinkTriggerN_controller": 
+     {
+         "bar": 0
+         ,"base": "0x8000" 
+     }
+}

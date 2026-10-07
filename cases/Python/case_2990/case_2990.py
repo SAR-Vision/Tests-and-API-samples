@@ -33,8 +33,9 @@ def CaseArgumentParser():
                         help='Index of PCI device to use, '
                              'run this script with "--deviceList" to see available devices and exit')
     # Other arguments needed for this specific case, PARSE CASE SPECIFIC ARGUMENTS UNDER THIS LINE:
-    parser.add_argument('--emb_json_incorrect', type=str, default='incorrect_KYHWLib_0x410_emb.json', help='Path to incorrect JSON file')
-    parser.add_argument('--emb_json_correct', type=str, default='KYHWLib_0x410_emb.json', help='Path to correct JSON file')
+    parser.add_argument('--DevicePID', type=str, default='', help='use the DevicePID detected from the selected grabber')
+    parser.add_argument('--emb_json_incorrect', type=str, default='', help='Optional incorrect JSON filename override')
+    parser.add_argument('--emb_json_correct', type=str, default='', help='Optional correct JSON filename override')
     return parser
 
 
@@ -202,51 +203,193 @@ camHandleArray = {}
 
 
 def get_log_offsets(path):
-    """
-    Snapshot the current size of every KAYA_python*.log file in `path`.
-    Used as a "high water mark" so later checks only look at content
-    written AFTER this point, instead of deleting/truncating log files
-    that a background service may still have open (unsafe for unattended
-    cycles due to file-locking / race conditions).
-    """
     offsets = {}
+
     for file_name in os.listdir(path):
         full_path = os.path.join(path, file_name)
-        if os.path.isfile(full_path) and file_name.startswith("KAYA_python") and file_name.endswith(".log"):
+
+        if (
+            os.path.isfile(full_path)
+            and file_name.startswith("KAYA_")
+            and file_name.endswith(".log")
+        ):
             try:
                 offsets[full_path] = os.path.getsize(full_path)
             except OSError:
-                # File may have been rotated/removed between listdir() and getsize(); skip it
                 continue
+
     return offsets
 
 
 def check_log(path, string_to_check, since_offsets=None):
-    """
-    Search KAYA_python*.log files in `path` for `string_to_check`.
-    If `since_offsets` (as returned by get_log_offsets) is provided, only
-    the portion of each file written after the recorded offset is searched,
-    so results from a previous test phase don't leak into this one and no
-    log file needs to be deleted or truncated.
-    New log files that didn't exist when the offset snapshot was taken
-    (offset 0) are searched in full.
-    """
     since_offsets = since_offsets or {}
+
     for file_name in os.listdir(path):
         full_path = os.path.join(path, file_name)
-        if os.path.isfile(full_path) and file_name.startswith("KAYA_python") and file_name.endswith(".log"):
+
+        if (
+            os.path.isfile(full_path)
+                and file_name.lower().endswith(".log")
+        ):
             start_offset = since_offsets.get(full_path, 0)
+
             try:
-                with open(full_path, "r", encoding="utf-8", errors='ignore') as log:
+                with open(
+                    full_path,
+                    "r",
+                    encoding="utf-8",
+                    errors="ignore"
+                ) as log:
                     log.seek(start_offset)
                     data = log.read()
+
             except OSError as ex:
                 print(f"[WARN] Could not read log file {full_path}: {ex}")
                 continue
-            if string_to_check in data:
+
+            if data:
+                for line in data.splitlines():
+                    if "json" in line.lower() or "invalid" in line.lower():
+                        print(f"[LOG] {file_name}: {line}")
+
+            if string_to_check.lower() in data.lower():
+                print(f"[INFO] Found '{string_to_check}' in: {file_name}")
                 return True
 
     return False
+
+
+def normalize_device_pid(value):
+    if value is None:
+        return None
+
+    if isinstance(value, int):
+        return value
+
+    value = str(value).strip()
+
+    if not value:
+        return None
+
+    return int(value, 0)
+
+
+def find_device_pid_folder(test_dir, device_pid):
+    print(f"[INFO] Searching DevicePID folder in: {test_dir}")
+
+    for item in sorted(test_dir.iterdir(), key=lambda p: p.name.lower()):
+        if not item.is_dir():
+            continue
+
+        if not item.name.lower().startswith("0x"):
+            continue
+
+        try:
+            folder_pid = int(item.name, 16)
+        except ValueError:
+            continue
+
+        print(f"[INFO] Found DevicePID folder: {item.name}")
+
+        if folder_pid == device_pid:
+            return item
+
+    return None
+
+
+def get_json_files(pid_folder, args):
+    pid_name = pid_folder.name
+
+    incorrect_name = args.get("emb_json_incorrect")
+    correct_name = args.get("emb_json_correct")
+
+    if not incorrect_name:
+        incorrect_name = f"incorrect_KYHWLib_{pid_name}_emb.json"
+
+    if not correct_name:
+        correct_name = f"KYHWLib_{pid_name}_emb.json"
+
+    incorrect_json = pid_folder / incorrect_name
+    correct_json = pid_folder / correct_name
+
+    if not incorrect_json.is_file():
+        raise FileNotFoundError(f"Incorrect JSON file not found: {incorrect_json}")
+
+    if not correct_json.is_file():
+        raise FileNotFoundError(f"Correct JSON file not found: {correct_json}")
+
+    return incorrect_json, correct_json
+
+
+def get_kaya_conf_folder():
+    conf_path = os.environ.get("KAYA_VISION_POINT_CONF")
+
+    if not conf_path:
+        raise EnvironmentError("KAYA_VISION_POINT_CONF is not defined")
+
+    conf_folder = pathlib.Path(conf_path)
+
+    if not conf_folder.is_dir():
+        raise FileNotFoundError(
+            f"KAYA Instruments Conf folder not found: {conf_folder}"
+        )
+
+    return conf_folder
+
+
+def get_vp_log_folder():
+    system_platform = platform.system().lower()
+
+    if system_platform == "windows":
+        log_folder = pathlib.Path(r"C:\ProgramData\KAYA Instruments\Logs")
+    elif system_platform == "linux":
+        log_folder = pathlib.Path("/var/log/KAYA_Instruments")
+    else:
+        raise RuntimeError(f"Unsupported platform: {platform.system()}")
+
+    if not log_folder.is_dir():
+        raise FileNotFoundError(f"Vision Point log folder not found: {log_folder}")
+
+    return log_folder
+
+
+def scan_open_close(device_index, allow_open_failure=False):
+    """
+    Perform DeviceScan and open/close the selected grabber.
+
+    With an incorrect JSON, KYFG_Open may fail.  That is acceptable for
+    phase 1, but HW_INVALID_JSON_FILE must still be present in the log.
+    """
+
+    (status, device_count) = KY_DeviceScan()
+
+    print(f"[INFO] Device scan found {device_count} device(s)")
+
+    if device_index < 0 or device_index >= device_count:
+        raise RuntimeError(
+            f"Device index {device_index} is not available after DeviceScan")
+
+    grabber_handle = None
+
+    try:
+        print(f"[INFO] Opening frame grabber [{device_index}]...")
+        (grabber_handle,) = KYFG_Open(device_index)
+
+        print(f"[INFO] Frame grabber opened. Handle: {grabber_handle}")
+
+    except Exception as ex:
+        print(f"[INFO] KYFG_Open raised: {ex}")
+
+        if not allow_open_failure:
+            raise
+
+    finally:
+        if grabber_handle:
+            try:
+                KYFG_Close(grabber_handle)
+                print("[INFO] Frame grabber closed")
+            except Exception as ex:
+                print(f"[WARN] KYFG_Close failed: {ex}")
 
 
 def CaseRun(args):
@@ -295,110 +438,279 @@ def CaseRun(args):
     # End of common KAYA prolog for "def CaseRun(args)"
 
     # Other parameters used by this particular case
-    emb_json_incorrect = args.get('emb_json_incorrect')
-    emb_json_correct = args.get('emb_json_correct')
+    selected_device_info = device_infos[device_index]
+    detected_device_pid = int(selected_device_info.DevicePID)
+    detected_pid_hex = f"0x{detected_device_pid:x}"
 
-    # Poll settings for waiting on log output (Vision Point logger writes asynchronously)
-    LOG_POLL_INTERVAL_SEC = 0.5
-    LOG_POLL_TIMEOUT_SEC = 5
+    print(
+        f"[INFO] Selected grabber DevicePID: "
+        f"{detected_device_pid} ({detected_pid_hex})"
+    )
 
-    def wait_for_log(path, string_to_check, since_offsets, timeout=LOG_POLL_TIMEOUT_SEC):
-        """Poll the log for up to `timeout` seconds instead of a single fixed sleep,
-        so the case reacts as soon as the message shows up and still tolerates
-        a slow/async logger."""
-        deadline = time.time() + timeout
-        while True:
-            if check_log(path, string_to_check, since_offsets):
-                return True
-            if time.time() >= deadline:
-                return False
-            time.sleep(LOG_POLL_INTERVAL_SEC)
+    # Optional --DevicePID parameter is only a validation.
+    # The JSON folder is always selected according to the ACTUAL detected grabber.
+    requested_device_pid = normalize_device_pid(
+        args.get("DevicePID")
+    )
 
-    system_platform = platform.system().lower()
-    current_folder_path = os.path.dirname(__file__)
-
-    if system_platform == 'linux':
-        JSON_FILE_PATH = os.environ['KAYA_VISION_POINT_LIB_PATH']
-    elif system_platform == 'windows':
-        JSON_FILE_PATH = os.environ['KAYA_VISION_POINT_CONF']
-
-    OS_ENV_VALUE = os.environ.get("WithAdapter", "")
-    if not len(OS_ENV_VALUE):
-        LOG_PATH_ENV = "KAYA_VISION_POINT_LOGS"
-    else:
-        LOG_PATH_ENV = "KAYA_VISION_POINT_2_LOGS"
-
-    LOG_FILE_PATH = os.environ[LOG_PATH_ENV]
-
-    correct_json_dst = os.path.join(JSON_FILE_PATH, emb_json_correct)
-    incorrect_json_dst = os.path.join(JSON_FILE_PATH, emb_json_incorrect.replace('incorrect_', ''))
-
-    try:
-        # ---- Phase 1: correct JSON should load without error ----
-        print("\ncorrect json:", emb_json_correct)
-        shutil.copy(os.path.join(current_folder_path, emb_json_correct), JSON_FILE_PATH)
-        print("json path:", JSON_FILE_PATH)
-        print("log file path:", LOG_FILE_PATH)
-
-        # Snapshot log file sizes BEFORE opening the grabber, so we only look at
-        # what gets written during this phase (no deletion needed).
-        offsets_before_correct = get_log_offsets(LOG_FILE_PATH)
-
-        try:
-            (grabberHandle,) = KYFG_Open(device_index)
-            KYFG_Close(grabberHandle)
-        except Exception as ex:
-            print(f"[ERROR] KYFG_Open/Close failed unexpectedly with correct JSON in place: {ex}")
-            raise
-
-        result = wait_for_log(LOG_FILE_PATH, 'HW_INVALID_JSON_FILE', offsets_before_correct)
-        assert result is False, 'HW_INVALID_JSON_FILE is found in logs with correct JSON in place'
-        print("[PASS] No HW_INVALID_JSON_FILE with correct JSON\n")
-
-        # ---- Phase 2: incorrect JSON should be rejected ----
-        print("incorrect JSON:", emb_json_incorrect)
-        shutil.copy(
-            os.path.join(current_folder_path, emb_json_incorrect),
-            incorrect_json_dst
+    if (
+        requested_device_pid is not None
+        and requested_device_pid != detected_device_pid
+    ):
+        print(
+            f"[ERROR] Requested DevicePID "
+            f"{args['DevicePID']} does not match detected "
+            f"DevicePID {detected_pid_hex}"
         )
 
-        # Snapshot log offsets again right before this phase's trigger action
-        offsets_before_incorrect = get_log_offsets(LOG_FILE_PATH)
+        return CaseReturnCode.WRONG_PARAM_VALUE
 
-        open_exception = None
-        try:
-            (grabberHandle,) = KYFG_Open(device_index)
-            KYFG_Close(grabberHandle)
-        except Exception as ex:
-            # Expected: an invalid embedded JSON can cause KYFG_Open to fail outright
-            # rather than open cleanly and only log a warning. Either outcome is
-            # acceptable evidence for this phase, so we don't fail the case here.
-            open_exception = ex
-            print(f"[INFO] KYFG_Open/Close raised with invalid JSON present (may be expected): {ex}")
 
-        result = wait_for_log(LOG_FILE_PATH, 'HW_INVALID_JSON_FILE', offsets_before_incorrect)
-        assert result is True or open_exception is not None, \
-            'HW_INVALID_JSON_FILE not found in logs, and KYFG_Open did not raise either'
-        if result:
-            print("[PASS] HW_INVALID_JSON_FILE found in logs with incorrect JSON in place")
-        else:
-            print("[PASS] KYFG_Open raised on invalid JSON (no log message seen, treated as acceptable evidence)")
+    # ------------------------------------------------------------
+    # Locate DevicePID folder
+    # ------------------------------------------------------------
+
+    test_dir = pathlib.Path(__file__).resolve().parent
+
+    pid_folder = find_device_pid_folder(
+        test_dir,
+        detected_device_pid
+    )
+
+    if pid_folder is None:
+        print(
+            f"[ERROR] Folder for DevicePID "
+            f"{detected_pid_hex} was not found in:"
+        )
+
+        print(test_dir)
+
+        return CaseReturnCode.NO_REQUIRED_PARAM
+
+
+    print(
+        f"[INFO] DevicePID folder: {pid_folder}"
+    )
+
+    # ------------------------------------------------------------
+    # Locate JSON files
+    # ------------------------------------------------------------
+
+    try:
+
+        incorrect_json_src, correct_json_src = \
+            get_json_files(pid_folder, args)
+
+        json_conf_folder = get_kaya_conf_folder()
+
+        log_folder = get_vp_log_folder()
+
+    except Exception as ex:
+
+        print(
+            f"[ERROR] {ex}"
+        )
+
+        return CaseReturnCode.NO_REQUIRED_PARAM
+
+
+    # Both files must be copied to the SAME installed filename.
+    #
+    # Example:
+    #
+    # source:
+    #   0x610\incorrect_KYHWLib_0x610_emb.json
+    #
+    # destination:
+    #   Common\bin\KYHWLib_0x610_emb.json
+    #
+    # Correct file:
+    #   0x610\KYHWLib_0x610_emb.json
+    #
+    # destination:
+    #   Common\bin\KYHWLib_0x610_emb.json
+
+    target_json = (
+        json_conf_folder /
+        correct_json_src.name
+    )
+
+
+    print(
+        f"[INFO] Incorrect JSON: {incorrect_json_src}"
+    )
+
+    print(
+        f"[INFO] Correct JSON:   {correct_json_src}"
+    )
+
+    print(
+        f"[INFO] Target JSON:    {target_json}"
+    )
+
+    print(
+        f"[INFO] Log directory:  {log_folder}"
+    )
+
+    LOG_POLL_INTERVAL_SEC = 0.5
+    LOG_POLL_TIMEOUT_SEC = 30
+
+
+    def wait_for_log(
+        string_to_check,
+        since_offsets,
+        timeout=LOG_POLL_TIMEOUT_SEC
+    ):
+
+        deadline = time.time() + timeout
+
+        while True:
+
+            if check_log(
+                str(log_folder),
+                string_to_check,
+                since_offsets
+            ):
+                return True
+
+            if time.time() >= deadline:
+                return False
+
+            time.sleep(
+                LOG_POLL_INTERVAL_SEC
+            )
+
+
+    try:
+
+        # ============================================================
+        # PHASE 1
+        # INCORRECT JSON
+        # HW_INVALID_JSON_FILE MUST appear
+        # ============================================================
+
+        print(
+            "\n========== PHASE 1: INCORRECT JSON =========="
+        )
+
+        print(
+            f"[INFO] Copying:\n"
+            f"       {incorrect_json_src}\n"
+            f"    -> {target_json}"
+        )
+
+        # Take the log snapshot BEFORE changing the JSON.
+        offsets_before_incorrect = get_log_offsets(
+            str(log_folder)
+        )
+
+        shutil.copy2(
+            incorrect_json_src,
+            target_json
+        )
+
+        # Trigger JSON loading.
+
+        scan_open_close(
+            device_index,
+            allow_open_failure=True
+        )
+
+        invalid_json_error_found = wait_for_log(
+            "HW_INVALID_JSON_FILE",
+            offsets_before_incorrect
+        )
+
+        assert invalid_json_error_found, (
+            "HW_INVALID_JSON_FILE was not found in "
+            "Vision Point logs with incorrect JSON"
+        )
+
+        print(
+            "[PASS] HW_INVALID_JSON_FILE was found "
+            "with incorrect JSON"
+        )
+
+        # ============================================================
+        # PHASE 2
+        # CORRECT JSON
+        # HW_INVALID_JSON_FILE MUST NOT appear
+        # ============================================================
+
+        print(
+            "\n========== PHASE 2: CORRECT JSON =========="
+        )
+
+        print(
+            f"[INFO] Copying:\n"
+            f"       {correct_json_src}\n"
+            f"    -> {target_json}"
+        )
+
+        shutil.copy2(
+            correct_json_src,
+            target_json
+        )
+
+
+        offsets_before_correct = get_log_offsets(
+            str(log_folder)
+        )
+        shutil.copy2(
+            correct_json_src,
+            target_json
+        )
+
+        # With valid JSON, opening the grabber itself must succeed.
+
+        scan_open_close(
+            device_index,
+            allow_open_failure=False
+        )
+
+        invalid_json_error_found = wait_for_log(
+            "HW_INVALID_JSON_FILE",
+            offsets_before_correct
+        )
+
+        assert not invalid_json_error_found, (
+            "HW_INVALID_JSON_FILE was found in "
+            "Vision Point logs with correct JSON"
+        )
+
+        print(
+            "[PASS] HW_INVALID_JSON_FILE was NOT found "
+            "with correct JSON"
+        )
 
     finally:
-        # ---- Cleanup: always try to restore correct JSON state, even on failure ----
-        if os.path.exists(incorrect_json_dst):
-            try:
-                os.remove(incorrect_json_dst)
-            except OSError as ex:
-                print(f"[WARN] Could not remove incorrect JSON file during cleanup: {ex}")
-        # Re-copy the correct JSON so the grabber is left in a valid state for
-        # whatever test runs next in the unattended cycle.
-        try:
-            shutil.copy(os.path.join(current_folder_path, emb_json_correct), JSON_FILE_PATH)
-        except OSError as ex:
-            print(f"[WARN] Could not restore correct JSON file during cleanup: {ex}")
 
-    print(f'\nExiting from CaseRun({args}) with code 0...')
+        # Always leave the machine with the valid JSON installed,
+        # even if Phase 1 or Phase 2 fails.
+
+        try:
+
+            print(
+                f"[INFO] Restoring correct JSON:\n"
+                f"       {correct_json_src}\n"
+                f"    -> {target_json}"
+            )
+
+            shutil.copy2(
+                correct_json_src,
+                target_json
+            )
+
+        except Exception as ex:
+
+            print(
+                f"[WARN] Could not restore correct JSON: {ex}"
+            )
+
+    print(
+        f'\nExiting from CaseRun({args}) with code SUCCESS...'
+    )
+
     return CaseReturnCode.SUCCESS
 
 

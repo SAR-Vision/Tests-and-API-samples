@@ -1,0 +1,828 @@
+{
+    // Komodo III CXP 4CH
+
+    "VP2": {
+
+        //////////////////////////////////////////////////
+        // CONTROLLERS
+        //////////////////////////////////////////////////
+
+        "SpeedConfigControllers": [
+            {
+                "SpeedConfigControllersType": "MacomHighSpeed", // "Dummy"/"MacomHighSpeed"/"MacomLowSpeed"/"MacomHighLowSpeed"/"FPGATransceiverPhyII"
+                "base_bar": 2,
+                "base_address": "0x5800",
+                "csr_speed": 20
+            }
+        ],
+
+        "TemperatureController": {
+            "base_bar": 2,
+            "base_address": "0x5008",
+            "type": "altera_s10_mailbox"
+        },
+
+        "FanController": { // Valid only if bit 21 of system capabilities is set (SYSTEM_CAPABLE_FAN_CONTROLLER)
+            "base_bar": 0,
+            "base_address": "0x6000",
+            "capabilities_address": "0x0",
+            "formula_type": 2 // 1 - Calculation formula for Device type I, 2 - Calculation formula for Device type II
+        },
+
+        "DDRControllers": [
+            {
+                "base_bar": 2,
+                "base_address": "0x7000",
+                "DDRControllerType": "V2" // Currently work only with CXP IP v3 include Zinc also
+            }
+        ],
+
+        "CommandControllers": [
+            {
+                // AbstarctHWController part:
+                "base_bar": 2,
+                "base_address": "0xA000",
+
+                // CommandController extention:
+                "command_base_tx": "0xA000",
+                "command_base_rx": "0xA040",
+
+                "type": "CXP_V2",
+                "channel": 0
+            },
+            {
+                // AbstarctHWController part:
+                "base_bar": 2,
+                "base_address": "0xA080",
+
+                // CommandController extention:
+                "command_base_tx": "0xA080",
+                "command_base_rx": "0xA0C0",
+
+                "type": "CXP_V2",
+                "channel": 1
+            },
+            {
+                // AbstarctHWController part:
+                "base_bar": 2,
+                "base_address": "0xA100",
+
+                // CommandController extention:
+                "command_base_tx": "0xA100",
+                "command_base_rx": "0xA140",
+
+                "type": "CXP_V2",
+                "channel": 2
+            },
+            {
+                // AbstarctHWController part:
+                "base_bar": 2,
+                "base_address": "0xA180",
+
+                // CommandController extention:
+                "command_base_tx": "0xA180",
+                "command_base_rx": "0xA1C0",
+
+                "type": "CXP_V2",
+                "channel": 3
+            }
+        ],
+
+        "GlobalInterruptController": {
+            "base_bar": 2,
+            "base_address": "0x0000"
+        },
+
+        "InterruptControllers": [
+            {
+                "base_bar": 2,
+                "base_address": "0x8000",
+                "interrupt": 1,
+                "type": "SGDMA"
+            },
+            {
+                "base_bar": 2,
+                "base_address": "0x8100",
+                "interrupt": 5,
+                "type": "SGDMA"
+            },
+            {
+                "base_bar": 2,
+                "base_address": "0x8200",
+                "interrupt": 7,
+                "type": "SGDMA"
+            },
+            {
+                "base_bar": 2,
+                "base_address": "0x8300",
+                "interrupt": 9,
+                "type": "SGDMA"
+            },
+            {
+                "base_bar": 2,
+                "base_address": "0x01C0",
+                "interrupt": 11,
+                "type": "GPIO"
+            },
+            {
+                "base_bar": 2,
+                "base_address": "0xA000",
+                "interrupt": 16,
+                "type": "CMD_CXPv2"
+            },
+            {
+                "base_bar": 2,
+                "base_address": "0xA080",
+                "interrupt": 17,
+                "type": "CMD_CXPv2"
+            },
+            {
+                "base_bar": 2,
+                "base_address": "0xA100",
+                "interrupt": 18,
+                "type": "CMD_CXPv2"
+            },
+            {
+                "base_bar": 2,
+                "base_address": "0xA180",
+                "interrupt": 19,
+                "type": "CMD_CXPv2"
+            }
+        ],
+
+        "GlobalHostIPController": {
+            "base_bar": 0,
+            "base_address": "0x400000",
+            "HostIPControllerType": "CXP_IP_V3"
+        },
+
+        "HostIPControllers": [
+            {
+                "base_bar": 0,
+                "base_address": "0x430000",
+                "supported_speeds": [
+                    "0x28", // LINK_SPEED_CXP1   1.25  Gbps
+                    "0x30", // LINK_SPEED_CXP2   2.5   Gbps
+                    "0x38", // LINK_SPEED_CXP3   3.125 Gbps
+                    "0x40", // LINK_SPEED_CXP5   5     Gbps
+                    "0x48", // LINK_SPEED_CXP6   6.25  Gbps
+                    "0x50", // LINK_SPEED_CXP10  10    Gbps
+                    "0x58" // LINK_SPEED_CXP12  12.5  Gbps
+                ],
+                "COAXPRESS_VERSIONS_SUPPORTED": "0x7", // COAXPRESS_REVISION_2_0_SUPPORTED(0x4) | COAXPRESS_REVISION_1_1_SUPPORTED(0x2) | COAXPRESS_REVISION_1_0_SUPPORTED(0x1)
+                "channel": 0,
+                "HostIPControllerType": "CXP_IP_V3"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x440000",
+                "supported_speeds": [
+                    "0x28", // LINK_SPEED_CXP1   1.25  Gbps
+                    "0x30", // LINK_SPEED_CXP2   2.5   Gbps
+                    "0x38", // LINK_SPEED_CXP3   3.125 Gbps
+                    "0x40", // LINK_SPEED_CXP5   5     Gbps
+                    "0x48", // LINK_SPEED_CXP6   6.25  Gbps
+                    "0x50", // LINK_SPEED_CXP10  10    Gbps
+                    "0x58" // LINK_SPEED_CXP12  12.5  Gbps
+                ],
+                "COAXPRESS_VERSIONS_SUPPORTED": "0x7", // COAXPRESS_REVISION_2_0_SUPPORTED(0x4) | COAXPRESS_REVISION_1_1_SUPPORTED(0x2) | COAXPRESS_REVISION_1_0_SUPPORTED(0x1)
+                "channel": 1,
+                "HostIPControllerType": "CXP_IP_V3"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x450000",
+                "supported_speeds": [
+                    "0x28", // LINK_SPEED_CXP1   1.25  Gbps
+                    "0x30", // LINK_SPEED_CXP2   2.5   Gbps
+                    "0x38", // LINK_SPEED_CXP3   3.125 Gbps
+                    "0x40", // LINK_SPEED_CXP5   5     Gbps
+                    "0x48", // LINK_SPEED_CXP6   6.25  Gbps
+                    "0x50", // LINK_SPEED_CXP10  10    Gbps
+                    "0x58" // LINK_SPEED_CXP12  12.5  Gbps
+                ],
+                "COAXPRESS_VERSIONS_SUPPORTED": "0x7", // COAXPRESS_REVISION_2_0_SUPPORTED(0x4) | COAXPRESS_REVISION_1_1_SUPPORTED(0x2) | COAXPRESS_REVISION_1_0_SUPPORTED(0x1)
+                "channel": 2,
+                "HostIPControllerType": "CXP_IP_V3"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x460000",
+                "supported_speeds": [
+                    "0x28", // LINK_SPEED_CXP1   1.25  Gbps
+                    "0x30", // LINK_SPEED_CXP2   2.5   Gbps
+                    "0x38", // LINK_SPEED_CXP3   3.125 Gbps
+                    "0x40", // LINK_SPEED_CXP5   5     Gbps
+                    "0x48", // LINK_SPEED_CXP6   6.25  Gbps
+                    "0x50", // LINK_SPEED_CXP10  10    Gbps
+                    "0x58" // LINK_SPEED_CXP12  12.5  Gbps
+                ],
+                "COAXPRESS_VERSIONS_SUPPORTED": "0x7", // COAXPRESS_REVISION_2_0_SUPPORTED(0x4) | COAXPRESS_REVISION_1_1_SUPPORTED(0x2) | COAXPRESS_REVISION_1_0_SUPPORTED(0x1)
+                "channel": 3,
+                "HostIPControllerType": "CXP_IP_V3"
+            }
+        ],
+
+        "GlobalStreamArbiterController": {
+            "base_bar": 0,
+            "base_address": "0x410000",
+            "GlobalHostIPControllerType": "CXP_IP_V3"
+        },
+
+        "HostStreamProcessorControllers":[
+            {
+                "base_bar": 0,
+                "base_address": "0x10000",
+                "HostStreamProcessorControllerType": "V1" // Currently work only with CXP IP v3 include Zinc also
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x10040",
+                "HostStreamProcessorControllerType": "V1" // Currently work only with CXP IP v3 include Zinc also
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x10080",
+                "HostStreamProcessorControllerType": "V1" // Currently work only with CXP IP v3 include Zinc also
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x100C0",
+                "HostStreamProcessorControllerType": "V1" // Currently work only with CXP IP v3 include Zinc also
+            }
+        ],
+
+        "StreamArbiterControllers": [
+            {
+                "base_bar": 0,
+                "base_address": "0x410000",
+                "camera_enable": "0x4",
+                "link_order": "0x2000",
+                "virtual_stream_id": "0x4000",
+                "StreamArbiterControllerType": "CXP_IP_V3"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x410000",
+                "camera_enable": "0x24",
+                "link_order": "0x2020",
+                "virtual_stream_id": "0x4400",
+                "StreamArbiterControllerType": "CXP_IP_V3"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x410000",
+                "camera_enable": "0x44",
+                "link_order": "0x2040",
+                "virtual_stream_id": "0x4800",
+                "StreamArbiterControllerType": "CXP_IP_V3"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x410000",
+                "camera_enable": "0x64",
+                "link_order": "0x2060",
+                "virtual_stream_id": "0x4C00",
+                "StreamArbiterControllerType": "CXP_IP_V3"
+            }
+        ],
+
+        "StreamDecoderControllers": [
+            {
+                "base_bar": 0,
+                "base_address": "0x420000",
+                "StreamDecoderControllersType": "CXP_IP_V3",
+                "virtual_stream_id": 0
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x420000",
+                "StreamDecoderControllersType": "CXP_IP_V3",
+                "virtual_stream_id": 1
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x420000",
+                "StreamDecoderControllersType": "CXP_IP_V3",
+                "virtual_stream_id": 2
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x420000",
+                "StreamDecoderControllersType": "CXP_IP_V3",
+                "virtual_stream_id": 3
+            }
+        ],
+
+        "StreamImageProcessingControllers": [
+            {
+                "base_bar": 0,
+                "base_address": "0x500000",
+                "StreamImageProcessingControllerType": "ISP_V1"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x500100",
+                "StreamImageProcessingControllerType": "ISP_V1"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x500200",
+                "StreamImageProcessingControllerType": "ISP_V1"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x500300",
+                "StreamImageProcessingControllerType": "ISP_V1"
+            }
+        ],
+
+        "DMAControllers": [
+            {
+                /* enum class Direction{UNDEFINED = -1, HOST2DEVICE = 0, DEVICE2HOST = 1}; */
+                "base_bar": 2,
+                "base_address": "0x8000",
+                "channel_direction": 1,
+                "type": "SGDMA_V2"
+            },
+            {
+                "base_bar": 2,
+                "base_address": "0x8100",
+                "channel_direction": 1,
+                "type": "SGDMA_V2"
+            },
+            {
+                "base_bar": 2,
+                "base_address": "0x8200",
+                "channel_direction": 1,
+                "type": "SGDMA_V2"
+            },
+            {
+                "base_bar": 2,
+                "base_address": "0x8300",
+                "channel_direction": 1,
+                "type": "SGDMA_V2"
+            }
+        ],
+
+        "MetadataControllers": [
+            {
+                "base_bar": 2,
+                "base_address": "0x8040",
+                "type": "META_V1",
+                "clock_frequency": 125.0,
+                "clock_frequency_source": null // Clock frequency source reserved for future enhancements
+            },
+            {
+                "base_bar": 2,
+                "base_address": "0x8140",
+                "type": "META_V1",
+                "clock_frequency": 125.0,
+                "clock_frequency_source": null
+            },
+            {
+                "base_bar": 2,
+                "base_address": "0x8240",
+                "type": "META_V1",
+                "clock_frequency": 125.0,
+                "clock_frequency_source": null
+            },
+            {
+                "base_bar": 2,
+                "base_address": "0x8340",
+                "type": "META_V1",
+                "clock_frequency": 125.0,
+                "clock_frequency_source": null
+            }
+        ],
+
+        "LinkTriggerControllers": [
+            {
+                "base_bar": 0,
+                "base_address": "0x62200"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x62240"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x62280"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x622C0"
+            }
+        ],
+
+        "TimerTriggerControllers": [
+            {
+                "base_bar": 0,
+                "base_address": "0x62400"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x62440"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x62480"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x624C0"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x62500"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x62540"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x62580"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x625C0"
+            }
+        ],
+
+        "EncoderTriggerControllers": [
+            {
+                "base_bar": 0,
+                "base_address": "0x62600"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x62640"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x62680"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x626C0"
+            }
+        ],
+
+        "StreamTriggerControllers": [
+            {
+                "base_bar": 0,
+                "base_address": "0x62000"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x62040"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x62080"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x620C0"
+            }
+        ],
+        
+        "TriggerNControllers": [
+            {
+                "base_bar": 0,
+                "base_address": "0x8040"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x8080"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x80C0"
+            },
+            {
+                "base_bar": 0,
+                "base_address": "0x8100"
+            }
+        ],
+
+        //////////////////////////////////////////////////
+        // DRIVERS
+        //////////////////////////////////////////////////
+
+        "CommandDriver": {
+            "CommandChannelDrivers": [
+                {
+                    "interrupt_number": 16,
+                    "command_controller_channel": 0
+                },
+                {
+                    "interrupt_number": 17,
+                    "command_controller_channel": 1
+                },
+                {
+                    "interrupt_number": 18,
+                    "command_controller_channel": 2
+                },
+                {
+                    "interrupt_number": 19,
+                    "command_controller_channel": 3
+                }
+            ]
+        },
+
+        "DMADriver": {
+            "DMAChannelDrivers": [
+                {
+                    "interrupt_number": 1,
+                    "dma_controller_index": 0,
+                    "metadata_controller_dma_index": 0
+                },
+                {
+                    "interrupt_number": 5,
+                    "dma_controller_index": 1,
+                    "metadata_controller_dma_index": 1
+                },
+                {
+                    "interrupt_number": 7,
+                    "dma_controller_index": 2,
+                    "metadata_controller_dma_index": 2
+                },
+                {
+                    "interrupt_number": 9,
+                    "dma_controller_index": 3,
+                    "metadata_controller_dma_index": 3
+                }
+            ]
+        },
+
+        "HostIPDriver": {
+            "HostIPChannelDrivers": [
+                {
+                    "host_ip_controller_channel": 0
+                },
+                {
+                    "host_ip_controller_channel": 1
+                },
+                {
+                    "host_ip_controller_channel": 2
+                },
+                {
+                    "host_ip_controller_channel": 3
+                }
+            ]
+        },
+
+        "SpeedConfigDriver": {
+            "SpeedConfigDrivers": [
+                {
+                    "controller_index": 0,
+                    "channel_select_id": 0
+                },
+                {
+                    "controller_index": 0,
+                    "channel_select_id": 1
+                },
+                {
+                    "controller_index": 0,
+                    "channel_select_id": 2
+                },
+                {
+                    "controller_index": 0,
+                    "channel_select_id": 3
+                }
+            ]
+        },
+        
+        "LinkTriggersDriver": {
+            "LinkTriggersChannelDrivers": [
+                {
+                    "link_trigger_channel": 0
+                },
+                {
+                    "link_trigger_channel": 1
+                },
+                {
+                    "link_trigger_channel": 2
+                },
+                {
+                    "link_trigger_channel": 3
+                }
+            ]
+        },
+
+        "TimerTriggersDriver": {
+            "TimerTriggersChannelDrivers": [
+                {
+                    "timer_trigger_channel": 0
+                },
+                {
+                    "timer_trigger_channel": 1
+                },
+                {
+                    "timer_trigger_channel": 2
+                },
+                {
+                    "timer_trigger_channel": 3
+                },
+                {
+                    "timer_trigger_channel": 4
+                },
+                {
+                    "timer_trigger_channel": 5
+                },
+                {
+                    "timer_trigger_channel": 6
+                },
+                {
+                    "timer_trigger_channel": 7
+                }
+            ]
+        },
+
+        "EncoderTriggersDriver": {
+            "EncoderTriggersChannelDrivers": [
+                {
+                    "encoder_trigger_channel": 0
+                },
+                {
+                    "encoder_trigger_channel": 1
+                },
+                {
+                    "encoder_trigger_channel": 2
+                },
+                {
+                    "encoder_trigger_channel": 3
+                }
+            ]
+        },
+
+        "StreamTriggersDriver": {
+            "StreamTriggersChannelDrivers": [
+                {
+                    "stream_trigger_channel": 0
+                },
+                {
+                    "stream_trigger_channel": 1
+                },
+                {
+                    "stream_trigger_channel": 2
+                },
+                {
+                    "stream_trigger_channel": 3
+                }
+            ]
+        },
+        
+        "TriggerNDriver": {
+            "TriggerNChannelDrivers": [
+                {
+                    "trigger_n_channel": 0
+                },
+                {
+                    "trigger_n_channel": 1
+                },
+                {
+                    "trigger_n_channel": 2
+                },
+                {
+                    "trigger_n_channel": 3
+                }
+            ]
+        }
+    },
+    
+    "File version": 60500,
+
+    // Komodo III CXP 4 CH
+    "Device": {
+        "X": 1 // Just first dummy entry - no meaning
+        ,
+        "system_capabilities": "0x200",
+        "pocxp_i2c_monitor_min_rev": 0,
+        "on_board_memory": 0 // 0 MB
+
+        ,
+        "classification": "Host" // Main device classification "Host"(FrameGrabber)/"Slave"(Chameleon)/"FNC"/"Custom"
+        ,
+        "protocol": "CoaXPress" // "CoaXPress"/"CLHS"/"GigE"/"Mixed"
+        ,
+        "generation": 3
+
+        ,
+        "io_features_value": "0x28004484" // [3..0] Encoders - 4, [7..4] Timers - 8, [11..8] Stream Triggers - 4,
+        // [15..12] Camera Triggers - 4, [31..24] LineIO - 40 (Default: 0x28004444)
+
+        ,
+        "InitialParameterValues": {
+            "DevicePciGenerationMin": 3,
+            "DevicePciLanesMin": 8
+        }
+        /*
+        ,"CleanupSequence": [
+            {"comment": "nSupportedStreams"}
+            ,{"bar": 0, "address": ["0x00402000", "0x0"], "value": 0} // stream_disable
+            ,{"bar": 0, "address": ["0x00402000", "0x0"], "value": 2} // stream_reset"
+            ,{"bar": 0, "address": ["0x00403000", "0x0"], "value": 0} // stream_disable
+            ,{"bar": 0, "address": ["0x00403000", "0x0"], "value": 2} // stream_reset"
+            ,{"bar": 0, "address": ["0x00404000", "0x0"], "value": 0} // stream_disable
+            ,{"bar": 0, "address": ["0x00404000", "0x0"], "value": 2} // stream_reset"
+            ,{"bar": 0, "address": ["0x00405000", "0x0"], "value": 0} // stream_disable
+            ,{"bar": 0, "address": ["0x00405000", "0x0"], "value": 2} // stream_reset"
+
+            ,{"comment": "DMAControllers"}
+            ,{"bar": 2, "address": ["0x00008000", "0x40", "0x0"], "value": 2} //if (refKYHW_HANDLE_STRUCT.m_bDmaMetainfo) csr_base + CSR_INTERRUPT_META_DATA_OFFSET + META_CONTROL_REGISTER_OFFSET
+            ,{"bar": 2, "address": ["0x00008000", "0x4"        ], "value": 1} // reconstruct 'stop_dispatcher': csr_base + CSR_CONTROL_REG => CSR_STOP_MASK
+            ,{"bar": 2, "address": ["0x00008000", "0x4"        ], "value": 2} // reconstruct 'reset_dispatcher': csr_base + CSR_CONTROL_REG => CSR_RESET_MASK ( == (1<<1))
+            ,{"bar": 2, "address": ["0x00008000", "0x4"        ], "value": "0x200"} // see implementation of stop_fetch for command to be send in order to stop DMA: csr_base + CSR_CONTROL_REG => CSR_STOP_FETCH_MASK ( == (1<<9))
+            
+            ,{"bar": 2, "address": ["0x00008100", "0x40", "0x0"], "value": 2} 
+            ,{"bar": 2, "address": ["0x00008100", "0x4"        ], "value": 1} 
+            ,{"bar": 2, "address": ["0x00008100", "0x4"        ], "value": 2} 
+            ,{"bar": 2, "address": ["0x00008100", "0x4"        ], "value": "0x200"}
+            
+            ,{"bar": 2, "address": ["0x00008200", "0x40", "0x0"], "value": 2} 
+            ,{"bar": 2, "address": ["0x00008200", "0x4"        ], "value": 1} 
+            ,{"bar": 2, "address": ["0x00008200", "0x4"        ], "value": 2} 
+            ,{"bar": 2, "address": ["0x00008200", "0x4"        ], "value": "0x200"}
+            
+            ,{"bar": 2, "address": ["0x00008300", "0x40", "0x0"], "value": 2} 
+            ,{"bar": 2, "address": ["0x00008300", "0x4"        ], "value": 1} 
+            ,{"bar": 2, "address": ["0x00008300", "0x4"        ], "value": 2} 
+            ,{"bar": 2, "address": ["0x00008300", "0x4"        ], "value": "0x200"}
+            
+            ,{"bar": 2, "address": ["0x00008400", "0x40", "0x0"], "value": 2} 
+            ,{"bar": 2, "address": ["0x00008400", "0x4"        ], "value": 1} 
+            ,{"bar": 2, "address": ["0x00008400", "0x4"        ], "value": 2} 
+            ,{"bar": 2, "address": ["0x00008400", "0x4"        ], "value": "0x200"}
+            
+            ,{"bar": 2, "address": ["0x00008500", "0x40", "0x0"], "value": 2} 
+            ,{"bar": 2, "address": ["0x00008500", "0x4"        ], "value": 1} 
+            ,{"bar": 2, "address": ["0x00008500", "0x4"        ], "value": 2} 
+            ,{"bar": 2, "address": ["0x00008500", "0x4"        ], "value": "0x200"}
+            
+            ,{"bar": 2, "address": ["0x00008600", "0x40", "0x0"], "value": 2} 
+            ,{"bar": 2, "address": ["0x00008600", "0x4"        ], "value": 1} 
+            ,{"bar": 2, "address": ["0x00008600", "0x4"        ], "value": 2} 
+            ,{"bar": 2, "address": ["0x00008600", "0x4"        ], "value": "0x200"}
+            
+            ,{"bar": 2, "address": ["0x00008700", "0x40", "0x0"], "value": 2} 
+            ,{"bar": 2, "address": ["0x00008700", "0x4"        ], "value": 1} 
+            ,{"bar": 2, "address": ["0x00008700", "0x4"        ], "value": 2} 
+            ,{"bar": 2, "address": ["0x00008700", "0x4"        ], "value": "0x200"}
+        ]
+        */
+    }
+    ,"CSRController": { // Valid only if bit 8 of system capabilities is set (SYSTEM_CSR_CONFIGURED)
+        "base": "0x0",
+        "CSRControllerType" : "Dummy"
+    }
+    ,"HostIPController": {
+        "HostIPControllerType": "CXP_IP_V3", // see sections "CXP Host IP" and "CXP Host Link Registers" at https://wiki.kayainstruments.com/bin/view/Collections/Projects/CXP_IP/V3/HSID/#
+        "base_address": "0x400000",
+        "host_ip_bases": [
+            "0x430000",
+            "0x440000",
+            "0x450000",
+            "0x460000"
+        ],
+        "supported_speeds": [
+            "0x28" // LINK_SPEED_CXP1   1.25  Gbps
+            ,
+            "0x30" // LINK_SPEED_CXP2   2.5   Gbps
+            ,
+            "0x38" // LINK_SPEED_CXP3   3.125 Gbps
+            ,
+            "0x40" // LINK_SPEED_CXP5   5     Gbps
+            ,
+            "0x48" // LINK_SPEED_CXP6   6.25  Gbps
+            ,
+            "0x50" // LINK_SPEED_CXP10  10    Gbps
+            ,
+            "0x58" // LINK_SPEED_CXP12  12.5  Gbps
+        ],
+        "COAXPRESS_VERSIONS_SUPPORTED": "0x7" // COAXPRESS_REVISION_2_0_SUPPORTED(0x4) | COAXPRESS_REVISION_1_1_SUPPORTED(0x2) | COAXPRESS_REVISION_1_0_SUPPORTED(0x1)
+    },
+    
+    "GlobalReset":"
+        var sys_bar = 2;
+        var sys_reg = 0x5000;
+        
+        log.info(\"Started Global Reset Procedure\");
+        log.info(\"Bar: \" + sys_bar + \", register: 0x\" + sys_reg.toString(16).toUpperCase());
+        
+        var value = hw.read32(sys_bar, sys_reg);
+        log.info(\"Initial value: 0x\" + value.toString(16).toUpperCase());
+        
+        log.info(\"Setting bit 0\");
+        value |= 1;
+        hw.write32(sys_bar, sys_reg, value);
+        
+        log.info(\"Clearing bit 0\");
+        value &= ~1;
+        hw.write32(sys_bar, sys_reg, value);
+        
+        log.info(\"Finished Global Reset Procedure\");
+    "
+}

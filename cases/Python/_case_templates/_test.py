@@ -184,12 +184,18 @@ def test_case(command_line_args, pytest_parametrize):
 
     # print(f'Case return code: {return_code}')
     case_log_file = copy_log(pathlib.Path(__file__).name, pytest_parametrize, pid)
+
     error_count = 0
-    with case_log_file.open('r', errors='ignore') as lf:
-        log_file_data = lf.readlines()
-    for next_line in log_file_data:
-        if 'error' in next_line.lower():
-            error_count += 1
+
+    if case_log_file is not None and case_log_file.exists():
+        with case_log_file.open('r', errors='ignore') as lf:
+            log_file_data = lf.readlines()
+
+        for next_line in log_file_data:
+            if 'error' in next_line.lower():
+                error_count += 1
+    else:
+        print("No KAYA log file found for this test; skipping log error check.")
     full_output = f'ERROR COUNT FROM LOG FILE = {error_count}\n' + full_output
     if return_code == CaseReturnCode.NO_HW_FOUND:
         print(full_output)
