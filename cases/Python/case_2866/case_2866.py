@@ -95,6 +95,7 @@ log_path = r"C:\Users\Public\Documents\SIGVERIF.TXT"
 
 
 # 2. Run SigVerif.exe
+# 2. Run SigVerif.exe
 def run_sigverif_scan():
     print("log path:", log_path)
 
@@ -110,32 +111,134 @@ def run_sigverif_scan():
     time.sleep(40)
 
     print("[*] Waiting for results window to appear...")
+
     start_time = time.time()
     timeout = 120
 
+    result_window = None
+    result_window_type = None
+
     while True:
-        result_windows = [
-            w for w in gw.getWindowsWithTitle('Signature Verification Results')
+
+        # ---------------------------------------------------------
+        # Windows 10:
+        # result window title = "Signature Verification Results"
+        # ---------------------------------------------------------
+        win10_windows = [
+            w for w in gw.getWindowsWithTitle(
+                'Signature Verification Results'
+            )
             if w.visible
         ]
-        if result_windows:
-            print("[*] Results window detected.")
+
+        # ---------------------------------------------------------
+        # Windows 11:
+        # result dialog title = "SigVerif"
+        #
+        # Use exact title comparison so we do NOT accidentally
+        # select the main "File Signature Verification" window.
+        # ---------------------------------------------------------
+        win11_windows = [
+            w for w in gw.getAllWindows()
+            if w.visible
+            and w.title.strip() == 'SigVerif'
+        ]
+
+        if win10_windows:
+            result_window = win10_windows[0]
+            result_window_type = "Windows 10"
+            break
+
+        if win11_windows:
+            result_window = win11_windows[0]
+            result_window_type = "Windows 11"
             break
 
         if time.time() - start_time > timeout:
-            raise TimeoutError("Timed out waiting for results window.")
+
+            visible_titles = [
+                w.title
+                for w in gw.getAllWindows()
+                if w.visible and w.title
+            ]
+
+            raise TimeoutError(
+                "Timed out waiting for SigVerif results window. "
+                f"Visible windows: {visible_titles}"
+            )
 
         time.sleep(1)
 
+    print(
+        f"[*] Results window detected "
+        f"({result_window_type} style): "
+        f"'{result_window.title}'"
+    )
+
+    # Bring result window to front.
+    try:
+        result_window.activate()
+    except Exception:
+        pass
+
     time.sleep(1)
+
     print("[*] SigVerif scan completed.")
 
+    # ---------------------------------------------------------
+    # Close result dialog
+    #
+    # Windows 10:
+    # ENTER closes "Signature Verification Results"
+    #
+    # Windows 11:
+    # ENTER presses the only "OK" button in the "SigVerif" dialog
+    # ---------------------------------------------------------
     pyautogui.press('enter')
+
     time.sleep(2)
 
-    pyautogui.press('tab')
-    time.sleep(3)
-    pyautogui.press('enter')
+    # ---------------------------------------------------------
+    # Close main "File Signature Verification" window.
+    #
+    # This is more reliable on Windows 11 than TAB + ENTER.
+    # ---------------------------------------------------------
+    main_windows = [
+        w for w in gw.getWindowsWithTitle(
+            'File Signature Verification'
+        )
+        if w.visible
+    ]
+
+    if main_windows:
+
+        main_window = main_windows[0]
+
+        try:
+            main_window.activate()
+            time.sleep(0.5)
+
+            pyautogui.hotkey(
+                'alt',
+                'f4'
+            )
+
+        except Exception:
+
+            try:
+                main_window.close()
+            except Exception:
+                pass
+
+    else:
+
+        # Fallback to the old behavior in case the main window
+        # has another title on some Windows version.
+        pyautogui.press('tab')
+        time.sleep(1)
+        pyautogui.press('enter')
+
+    time.sleep(2)
 
     print("[*] SigVerif was closed")
 
