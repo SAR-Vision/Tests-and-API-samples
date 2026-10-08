@@ -67,7 +67,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(KAYA_VISION_POINT_LIB_PATH)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>KYFGLib_vc141.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>KYFGLib$(KYFGLIB_ADAPTER_SUFFIX)_vc141.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
