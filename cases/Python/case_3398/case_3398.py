@@ -2,6 +2,8 @@
 import sys
 import os
 import argparse
+from ctypes import py_object, cast
+
 os.environ["WithAdapter"] = "1"
 sys.path.insert(0, os.environ['KAYA_VISION_POINT_PYTHON_PATH'])
 from KYFGLib import *
@@ -213,12 +215,16 @@ def ParseArgs():
 
 
 ##########
-# Classes
+# Callback counters
+# This case verifies:
+#   1. KYFG_StreamBufferCallbackRegister()
+#   2. KYFG_AuxDataCallbackRegister()
+#   3. KYDeviceEventCallBackRegister()
 ##########
-class CameraCallbacksCounter:
+class StreamCallbackCounter:
     def __init__(self):
         self.streamCallbackCounter = 0
-        self.cameraCallbackCounter = 0
+
 
 class GrabberCallbacksCounter:
     def __init__(self):
@@ -229,18 +235,16 @@ class GrabberCallbacksCounter:
 ##########
 # Functions
 #########
-def cameraCallbackFunction(userContext, streamHandle):
-    streamInfo = cast(userContext, py_object).value
-    streamInfo.cameraCallbackCounter += 1
-
 def device_event_callback_func(userContext, event):
     # print(type(userContext))
     streamInfo = cast(userContext, py_object).value
     streamInfo.eventCallbackCounter += 1
 
+
 def auxCallbackFunc(bufferHandle, userContext):
     streamInfo = cast(userContext, py_object).value
     streamInfo.auxCallbackCounter += 1
+
 
 def streamCallbackFunction(buffHandle, userContext):
     if buffHandle == 0:
@@ -303,7 +307,7 @@ def CaseRun(args):
     grabbers = [0 for i in range(infosize_test)]
     grabbers_info = [KY_DEVICE_INFO() for i in range(infosize_test)]
     grabber_callbacks = [0 for i in range(infosize_test)]
-    camera_callbacks = [[0 for i in range(4)] for i in range(infosize_test)]
+    stream_callbacks = [[0 for i in range(4)] for i in range(infosize_test)]
     camera_infos_array = [[KYFGCAMERA_INFO2() for i in range(4)] for i in range(infosize_test)]
     camerasArray = [[0 for i in range (4)] for i in range(infosize_test)]
     streamHandleArray = [[0 for i in range (4)] for i in range(infosize_test)]
@@ -364,16 +368,14 @@ def CaseRun(args):
             (status,) = KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "TriggerMode", "On")
             (status,) = KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "TriggerSource", "LinkTrigger0")
 
-            # callbacks registration and stream start
-            camera_callbacks_counter = CameraCallbacksCounter()
-            (status,) = KYFG_CameraCallbackRegister(cameraHandle, cameraCallbackFunction, py_object(camera_callbacks_counter))
-            print("Camera Callback registered")
+            # Stream callback registration and stream start
+            stream_callback_counter = StreamCallbackCounter()
             (status, streamHandle) = KYFG_StreamCreate(cameraHandle, 0)
             streamHandleArray[i][camera_index] = streamHandle
-            (status,) = KYFG_StreamBufferCallbackRegister(streamHandle, streamCallbackFunction, camera_callbacks_counter)
+            (status,) = KYFG_StreamBufferCallbackRegister(streamHandle, streamCallbackFunction, stream_callback_counter)
             print("Stream Callback registered")
 
-            camera_callbacks[i][camera_index] = camera_callbacks_counter
+            stream_callbacks[i][camera_index] = stream_callback_counter
             (status,payload_size, _,_) = KYFG_StreamGetInfo(streamHandle, KY_STREAM_INFO_CMD.KY_STREAM_INFO_PAYLOAD_SIZE)
             number_of_buffers = [0 for i in range(16)]
 
@@ -407,8 +409,7 @@ def CaseRun(args):
             (status,) = KYFG_SetGrabberValueInt(grabberHandle, "CameraSelector", camera_index)
             (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "CameraTriggerMode", "Off")
             (status,) = KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "TriggerMode", "Off")
-            (status) = KYFG_CameraCallbackUnregister(cameraHandle, cameraCallbackFunction)
-            (status) = KYFG_StreamBufferCallbackUnregister(streamHandleArray[i][camera_index],streamCallbackFunction)
+            (status) = KYFG_StreamBufferCallbackUnregister(streamHandleArray[i][camera_index], streamCallbackFunction)
             (status,) = KYFG_StreamDelete(streamHandleArray[i][camera_index])
             (status,) = KYFG_CameraClose(cameraHandle)
         (status,) = KYFG_AuxDataCallbackUnregister(grabberHandle, auxCallbackFunc)
@@ -425,13 +426,24 @@ def CaseRun(args):
                 if camerasArray[i][camera_index] == 0:
                     continue
                 print(f'Camera: {camera_infos_array[i][camera_index].deviceModelName}')
-                print("streamCallbackCounter", camera_callbacks[i][camera_index].streamCallbackCounter)
-                print("cameraCallbackCounter", camera_callbacks[i][camera_index].cameraCallbackCounter)
-                if camera_callbacks[i][camera_index].streamCallbackCounter == 0 \
-                        or camera_callbacks[i][camera_index].cameraCallbackCounter == 0:
+                print("streamCallbackCounter", stream_callbacks[i][camera_index].streamCallbackCounter)
+                if stream_callbacks[i][camera_index].streamCallbackCounter == 0:
+                    print("[FAIL] KYFG_StreamBufferCallbackRegister: no stream callbacks received")
                     error_count += 1
-            if grabber_callbacks[i].auxCallbackCounter == 0 or grabber_callbacks[i].eventCallbackCounter == 0:
+                else:
+                    print("[PASS] KYFG_StreamBufferCallbackRegister")
+
+            if grabber_callbacks[i].auxCallbackCounter == 0:
+                print("[FAIL] KYFG_AuxDataCallbackRegister: no AUX callbacks received")
                 error_count += 1
+            else:
+                print("[PASS] KYFG_AuxDataCallbackRegister")
+
+            if grabber_callbacks[i].eventCallbackCounter == 0:
+                print("[FAIL] KYDeviceEventCallBackRegister: no device-event callbacks received")
+                error_count += 1
+            else:
+                print("[PASS] KYDeviceEventCallBackRegister")
 
     assert error_count == 0, 'Test not passed'
     print(f'\nExiting from CaseRun({args}) with code SUCCESS...')
