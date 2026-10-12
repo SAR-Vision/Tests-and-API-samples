@@ -36,7 +36,7 @@ def CaseArgumentParser():
                              'run this script with "--deviceList" to see available devices and exit')
     # Other arguments needed for this specific case, PARSE CASE SPECIFIC ARGUMENTS UNDER THIS LINE:
     parser.add_argument('--cameraIndex', type=int, default=0, help='Camera index for this instance')
-    parser.add_argument('--number_of_sent_triggers', type=int, default=10, help='Number of sent triggers')
+    parser.add_argument('--number_of_sent_triggers', type=int, default=100, help='Number of sent triggers')
     return parser
 
 
@@ -327,7 +327,12 @@ def CaseRun(args):
     (status,) = KYFG_SetGrabberValueInt(grabberHandle, "TriggerSentCount", 0)
     (status,) = KYFG_SetGrabberValueInt(grabberHandle, "TriggerAcknowledgeCount", 0)
     (status,) = KYFG_SetGrabberValueInt(grabberHandle, "TriggerChangeCount", 0)
-    (status,) = KYFG_SetGrabberValueInt(grabberHandle, "CameraSelector", camera_master_link)
+    
+    time.sleep(2)
+    
+    (status, sent_count_before) = KYFG_GetGrabberValueInt(grabberHandle, "TriggerSentCount")
+    (status, change_count_before) = KYFG_GetGrabberValueInt(grabberHandle, "TriggerChangeCount")
+    print(f"TriggerSentCount: {sent_count_before}, TriggerChangeCount: {change_count_before} after reset trigger statistics")
 
     # Set timer for triggering
     (status,) = KYFG_SetGrabberValueEnum(grabberHandle, "TimerSelector", camera_master_link)
@@ -355,16 +360,17 @@ def CaseRun(args):
         print('Stop Loop', datetime.now().time())
         print(f'Sent trigger number {i + 1}')
         (status,) = KYFG_GrabberExecuteCommand(grabberHandle, "TimerTriggerSoftware")
-        time.sleep(2)
+        time.sleep(0.1)
+        
     (status, sent_count) = KYFG_GetGrabberValueInt(grabberHandle, "TriggerSentCount")
     (status, change_count) = KYFG_GetGrabberValueInt(grabberHandle, "TriggerChangeCount")
-    print("TriggerSentCount:", sent_count, "TriggerChangeCount:", change_count)
+    
+    print(f"Current TriggerSentCount: {sent_count} TriggerChangeCount: {change_count} after test")
+    print(f"Real sent TriggerSentCount: {sent_count - sent_count_before} TriggerChangeCount: {change_count - change_count_before} after test")
 
     (status,) = KYFG_CameraClose(cameraHandle)
     camIndex += 1
     (status,) = KYFG_Close(grabberHandle)
-
-    print("number of sent triggers:", number_of_sent_triggers)
 
     if camera_index == 0:
         for thread in threads:
@@ -375,9 +381,9 @@ def CaseRun(args):
             results.append(result)
         print('results =', results)
 
-    assert sent_count == number_of_sent_triggers, f'TriggerSentCount: {sent_count} is not match to ' \
+    assert (sent_count - sent_count_before) == number_of_sent_triggers, f'TriggerSentCount: {sent_count} is not match to ' \
                                                   f'number_of_sent_triggers: {number_of_sent_triggers}'
-    assert change_count == number_of_sent_triggers, f'TriggerChangeCount {change_count} is not match to ' \
+    assert (change_count - change_count_before) == number_of_sent_triggers, f'TriggerChangeCount {change_count} is not match to ' \
                                                     f'number_of_sent_triggers {number_of_sent_triggers}'
     if camera_index == 0:
         for res in results:
