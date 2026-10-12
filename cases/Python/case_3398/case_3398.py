@@ -233,6 +233,7 @@ class GrabberCallbacksCounter:
     def __init__(self):
         self.auxCallbackCounter = 0
         self.eventCallbackCounter = 0
+        self.heartbeatCallbackCounter = 0
         self.temperatureCallbackCounter = 0
         self.temperatureEvent = Event()
 
