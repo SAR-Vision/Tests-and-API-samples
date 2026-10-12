@@ -19,6 +19,7 @@ from enum import IntEnum  # for CaseReturnCode
 import time
 import json
 import pathlib
+from threading import Event
 
 
 def CaseArgumentParser():
@@ -33,6 +34,8 @@ def CaseArgumentParser():
                              'run this script with "--deviceList" to see available devices and exit')
     # Other arguments needed for this specific case, PARSE CASE SPECIFIC ARGUMENTS UNDER THIS LINE:
     parser.add_argument('--duration', type=int, default=10, help='Stream duration')
+    parser.add_argument("--eventTimeout", type=float, default=30.0,
+                        help="Seconds to wait for a temperature event after opening the grabber (0 < value <= 300)")
     return parser
 
 
@@ -230,15 +233,64 @@ class GrabberCallbacksCounter:
     def __init__(self):
         self.auxCallbackCounter = 0
         self.eventCallbackCounter = 0
+        self.temperatureCallbackCounter = 0
+        self.temperatureEvent = Event()
 
 
 ##########
 # Functions
 #########
 def device_event_callback_func(userContext, event):
-    # print(type(userContext))
     streamInfo = cast(userContext, py_object).value
     streamInfo.eventCallbackCounter += 1
+    try:
+        event_id = event.deviceEvent.eventId
+        if event_id == KYDEVICE_EVENT_ID.KYDEVICE_EVENT_SYSTEM_TEMPERATURE_ID:
+            streamInfo.temperatureCallbackCounter += 1
+            streamInfo.temperatureEvent.set()
+        if event_id == KYDEVICE_EVENT_ID.KYDEVICE_EVENT_CXP2_HEARTBEAT_ID:
+            streamInfo.heartbeatCallbackCounter += 1
+            return  # Count heartbeat delivery without flooding the console.
+        event_name = next(
+            (name for name, value in vars(KYDEVICE_EVENT_ID).items()
+             if name.startswith("KYDEVICE_EVENT_") and value == event_id),
+            "UNKNOWN")
+        details = {
+            "eventId": event_id,
+            "eventName": event_name,
+            "eventType": type(event).__name__,
+        }
+        if hasattr(event, "camHandle"):
+            details["camHandle"] = hex(int(event.camHandle))
+        for field in ("iDeviceLink", "iCameraLink", "srcDevicePort",
+                      "temperatureThresholdId"):
+            if hasattr(event, field):
+                value = getattr(event, field)
+                details[field] = (f"{value.name} ({value.value})"
+                                  if hasattr(value, "name") else value)
+        for field in ("heartBeat", "cxp2Event", "gencpEvent", "gigeEvent"):
+            if not hasattr(event, field):
+                continue
+            payload = getattr(event, field)
+            payload_details = {}
+            for name in ("masterHostConnectionID", "cameraTime", "tag",
+                         "dataSize", "eventSize", "eventId", "timestamp",
+                         "streamChannel", "blockId"):
+                if hasattr(payload, name):
+                    payload_details[name] = getattr(payload, name)
+            # Log bounded previews rather than entire fixed-size SDK arrays.
+            for name in ("dataWords", "data"):
+                if hasattr(payload, name):
+                    data = getattr(payload, name)
+                    payload_details[name + "Preview"] = list(data[:32])
+                    payload_details[name + "ArrayLength"] = len(data)
+            details[field] = payload_details
+        print(f'[DEVICE EVENT #{streamInfo.eventCallbackCounter}] '
+              + json.dumps(details, default=str), flush=True)
+    except Exception as exc:
+        # Diagnostic formatting must not escape through the native callback.
+        print(f'[DEVICE EVENT #{streamInfo.eventCallbackCounter}] '
+              f'type={type(event).__name__}; logging error: {exc}', flush=True)
 
 
 def auxCallbackFunc(bufferHandle, userContext):
@@ -296,7 +348,7 @@ def CaseRun(args):
             print(f'\ndeviceIndex {device_index} selected')
 
     # Verify deviceIndex being in the allowed range
-    if device_index >= infosize_test:
+    if not 0 <= device_index < infosize_test:
         print(f'\nDevice with the index {device_index} does not exist, exiting...')
         return CaseReturnCode.NO_HW_FOUND
 
@@ -304,6 +356,11 @@ def CaseRun(args):
 
     # Other parameters used by this particular case
     duration = args['duration']
+    event_timeout = args.get('eventTimeout', 30.0)
+    if not 0 < event_timeout <= 300:
+        print('[ERROR] eventTimeout must be greater than 0 and at most 300 seconds')
+        return CaseReturnCode.WRONG_PARAM_VALUE
+    temperature_event_received = False
     grabbers = [0 for i in range(infosize_test)]
     grabbers_info = [KY_DEVICE_INFO() for i in range(infosize_test)]
     grabber_callbacks = [0 for i in range(infosize_test)]
@@ -313,137 +370,197 @@ def CaseRun(args):
     streamHandleArray = [[0 for i in range (4)] for i in range(infosize_test)]
     error_count = 0
 
-    for x in range(0, infosize_test):
-        (status, device_info) = KY_DeviceInfo(x)
-        grabbers_info[x] = device_info
-        if device_info.m_Flags == KY_DEVICE_INFO_FLAGS.GRABBER and not device_info.isVirtual:
-            try:
-                (grabberHandle,) = KYFG_Open(x)
-                grabbers[x] = grabberHandle
-                (status, camerasArray[x]) = KYFG_UpdateCameraList(grabberHandle)
-            except:
-                grabbers[x] = 0
-                continue
-        else:
-            grabbers[x] = 0
+    opened_cameras = set()
+    camera_triggers_enabled = set()
+    grabber_triggers_enabled = set()
+    started_cameras = set()
+    registered_streams = set()
+    registered_aux = set()
+    registered_events = set()
+    configured_timers = set()
+    cleanup_errors = []
 
-    # Grabber preparation
-    for i in range(len(grabbers)):
-        if grabbers[i] == 0:
-            continue
-        grabberHandle = grabbers[i]
-        print(f"\nGrabber: {hex(int(grabberHandle))}")
-        (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "TimerSelector", "Timer0")
-        (status,) = KYFG_SetGrabberValueFloat(grabberHandle, "TimerDelay", 50000.)
-        (status,) = KYFG_SetGrabberValueFloat(grabberHandle, "TimerDuration", 50000.)
-        (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "TimerActivation", "RisingEdge")
-        (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "TimerTriggerSource", "KY_DISABLED")
-        (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "TimerEventMode", "RisingEdge")
+    def cleanup_call(function, *parameters):
+        try:
+            result = function(*parameters)
+            # Some unregister wrappers return a raw status without raising.
+            return_status(result[0])
+            return True
+        except Exception as exc:
+            cleanup_errors.append(f'{function.__name__}: {exc}')
+            print(f'[FAIL] Cleanup {function.__name__}: {exc}')
+            return False
 
-        # callbacks registration
-        grabber_callbacks_counter = GrabberCallbacksCounter()
-        (status,) = KYFG_AuxDataCallbackRegister(grabberHandle, auxCallbackFunc, py_object(grabber_callbacks_counter))
-        print("AUX Callback registered")
+    # Only the selected physical grabber belongs to this run.
+    device_info = device_infos[device_index]
+    if device_info.m_Flags != KY_DEVICE_INFO_FLAGS.GRABBER or device_info.isVirtual:
+        print('[ERROR] Selected device is not a physical grabber')
+        return CaseReturnCode.COULD_NOT_RUN
 
-        (status,) = KYDeviceEventCallBackRegister(grabberHandle, device_event_callback_func, py_object(grabber_callbacks_counter))
-        print("Event Callback registered")
-        grabber_callbacks[i] = grabber_callbacks_counter
-        # camera preparation
-        for camera_index in range(len(camerasArray[i])):
-            cameraHandle = camerasArray[i][camera_index]
-            (status, camera_infos_array[i][camera_index]) = KYFG_CameraInfo2(cameraHandle)
-            if "Chameleon" in camera_infos_array[i][camera_index].deviceModelName:
-                continue
-            print(f'Camera: {hex(cameraHandle)} : {camera_infos_array[i][camera_index].deviceModelName}')
-            (status,) = KYFG_CameraOpen2(cameraHandle, None)
+    # Prepare the callback context before opening to minimize registration delay.
+    grabber_callbacks[device_index] = GrabberCallbacksCounter()
+    try:
+        (grabberHandle,) = KYFG_Open(device_index)
+        grabbers[device_index] = grabberHandle
+        (status,) = KYDeviceEventCallBackRegister(
+            grabberHandle, device_event_callback_func, py_object(grabber_callbacks[device_index]))
+        return_status(status)
+        registered_events.add(device_index)
+        print('[STEP] Waiting for KYDEVICE_EVENT_SYSTEM_TEMPERATURE_ID '
+              f'after grabber open (timeout: {event_timeout:g}s)')
+        # No camera discovery/open or acquisition is needed for this event.
+        temperature_event_received = grabber_callbacks[device_index].temperatureEvent.wait(event_timeout)
+        if not temperature_event_received:
+            print('[INFO] Temperature-event wait timed out; continuing stream/AUX checks')
+        grabbers_info[device_index] = device_info
+        (status, camerasArray[device_index]) = KYFG_UpdateCameraList(grabberHandle)
+        if not camerasArray[device_index]:
+            print("[ERROR] No cameras found on the selected grabber")
+            return CaseReturnCode.NO_HW_FOUND
 
-            #########################################
-            Reset_camera(cameraHandle, grabberHandle)
-            #########################################
-               
-            (status,) = KYFG_SetGrabberValueInt(grabberHandle, "CameraSelector", camera_index)
-            (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "CameraTriggerMode", "On")
-            (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "CameraTriggerActivation", "AnyEdge")
-            (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "CameraTriggerSource", "KY_TIMER_ACTIVE_0")
-            (status,) = KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "TriggerMode", "On")
-            (status,) = KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "TriggerSource", "LinkTrigger0")
-
-            # Stream callback registration and stream start
-            stream_callback_counter = StreamCallbackCounter()
-            (status, streamHandle) = KYFG_StreamCreate(cameraHandle, 0)
-            streamHandleArray[i][camera_index] = streamHandle
-            (status,) = KYFG_StreamBufferCallbackRegister(streamHandle, streamCallbackFunction, stream_callback_counter)
-            print("Stream Callback registered")
-
-            stream_callbacks[i][camera_index] = stream_callback_counter
-            (status,payload_size, _,_) = KYFG_StreamGetInfo(streamHandle, KY_STREAM_INFO_CMD.KY_STREAM_INFO_PAYLOAD_SIZE)
-            number_of_buffers = [0 for i in range(16)]
-
-            for iFrame in range(len(number_of_buffers)):
-                (status, number_of_buffers[iFrame]) = KYFG_BufferAllocAndAnnounce(streamHandle, payload_size, 0)
-            (status,) = KYFG_BufferQueueAll(streamHandle, KY_ACQ_QUEUE_TYPE.KY_ACQ_QUEUE_UNQUEUED,
-                                            KY_ACQ_QUEUE_TYPE.KY_ACQ_QUEUE_INPUT)
-            (status,) = KYFG_CameraStart(cameraHandle, streamHandle, 0)
-
-    # Start trigger generation
-    for i in range(len(grabbers)):
-        if grabbers[i] == 0:
-            continue
-        KYFG_SetGrabberValueEnum_ByValueName(grabbers[i], "TimerTriggerSource", "KY_CONTINUOUS")
-    time.sleep(duration)
-
-    for i in range(len(grabbers)):
-        if grabbers[i] == 0:
-            continue
-        (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabbers[i], "TimerTriggerSource", "KY_DISABLED")
-
-    for i in range(len(grabbers)):
-        if grabbers[i] == 0:
-            continue
-        grabberHandle = grabbers[i]
-        print(f"\nClosing grabber {hex(grabberHandle.val)}")
-        for camera_index in range(len(camerasArray[i])):
-            cameraHandle = camerasArray[i][camera_index]
-            (status,) = KYFG_CameraStop(cameraHandle)
-            print(f'Camera {camera_infos_array[i][camera_index].deviceModelName} closed')
-            (status,) = KYFG_SetGrabberValueInt(grabberHandle, "CameraSelector", camera_index)
-            (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "CameraTriggerMode", "Off")
-            (status,) = KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "TriggerMode", "Off")
-            (status) = KYFG_StreamBufferCallbackUnregister(streamHandleArray[i][camera_index], streamCallbackFunction)
-            (status,) = KYFG_StreamDelete(streamHandleArray[i][camera_index])
-            (status,) = KYFG_CameraClose(cameraHandle)
-        (status,) = KYFG_AuxDataCallbackUnregister(grabberHandle, auxCallbackFunc)
-        (status,) = KYDeviceEventCallBackUnregister(grabberHandle, device_event_callback_func)
-        (status,) = KYFG_Close(grabberHandle)
+        # Grabber preparation
         for i in range(len(grabbers)):
             if grabbers[i] == 0:
                 continue
+            grabberHandle = grabbers[i]
+            print(f"\nGrabber: {hex(int(grabberHandle))}")
+            (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "TimerSelector", "Timer0")
+            configured_timers.add(i)
+            (status,) = KYFG_SetGrabberValueFloat(grabberHandle, "TimerDelay", 50000.)
+            (status,) = KYFG_SetGrabberValueFloat(grabberHandle, "TimerDuration", 50000.)
+            (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "TimerActivation", "RisingEdge")
+            (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "TimerTriggerSource", "KY_DISABLED")
+            (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "TimerEventMode", "RisingEdge")
 
-            print(f'\nGrabber: {grabbers_info[i].szDeviceDisplayName}: ')
-            print("auxCallbackCounter", grabber_callbacks[i].auxCallbackCounter)
-            print("eventCallbackCounter", grabber_callbacks[i].eventCallbackCounter)
+            # callbacks registration
+            grabber_callbacks_counter = grabber_callbacks[i]
+            (status,) = KYFG_AuxDataCallbackRegister(grabberHandle, auxCallbackFunc, py_object(grabber_callbacks_counter))
+            registered_aux.add(i)
+            grabber_callbacks[i] = grabber_callbacks_counter
+            print("AUX Callback registered")
+
+            # camera preparation
             for camera_index in range(len(camerasArray[i])):
-                if camerasArray[i][camera_index] == 0:
+                cameraHandle = camerasArray[i][camera_index]
+                (status, camera_infos_array[i][camera_index]) = KYFG_CameraInfo2(cameraHandle)
+                if "Chameleon" in camera_infos_array[i][camera_index].deviceModelName:
                     continue
-                print(f'Camera: {camera_infos_array[i][camera_index].deviceModelName}')
-                print("streamCallbackCounter", stream_callbacks[i][camera_index].streamCallbackCounter)
-                if stream_callbacks[i][camera_index].streamCallbackCounter == 0:
-                    print("[FAIL] KYFG_StreamBufferCallbackRegister: no stream callbacks received")
-                    error_count += 1
-                else:
-                    print("[PASS] KYFG_StreamBufferCallbackRegister")
+                print(f'Camera: {hex(cameraHandle)} : {camera_infos_array[i][camera_index].deviceModelName}')
+                (status,) = KYFG_CameraOpen2(cameraHandle, None)
+                opened_cameras.add((i, camera_index))
 
-            if grabber_callbacks[i].auxCallbackCounter == 0:
-                print("[FAIL] KYFG_AuxDataCallbackRegister: no AUX callbacks received")
+                (status,) = KYFG_SetGrabberValueInt(grabberHandle, "CameraSelector", camera_index)
+                Reset_camera(cameraHandle, grabberHandle)
+                (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "CameraTriggerMode", "On")
+                return_status(status)
+                grabber_triggers_enabled.add((i, camera_index))
+                (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "CameraTriggerActivation", "AnyEdge")
+                (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "CameraTriggerSource", "KY_TIMER_ACTIVE_0")
+                (status,) = KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "TriggerSource", "LinkTrigger0")
+                (status,) = KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "TriggerMode", "On")
+                return_status(status)
+                camera_triggers_enabled.add((i, camera_index))
+
+                # Stream callback registration and stream start
+                stream_callback_counter = StreamCallbackCounter()
+                (status, streamHandle) = KYFG_StreamCreate(cameraHandle, 0)
+                streamHandleArray[i][camera_index] = streamHandle
+                (status,) = KYFG_StreamBufferCallbackRegister(streamHandle, streamCallbackFunction, stream_callback_counter)
+                registered_streams.add((i, camera_index))
+                print("Stream Callback registered")
+
+                stream_callbacks[i][camera_index] = stream_callback_counter
+                (status,payload_size, _,_) = KYFG_StreamGetInfo(streamHandle, KY_STREAM_INFO_CMD.KY_STREAM_INFO_PAYLOAD_SIZE)
+                number_of_buffers = [0 for i in range(16)]
+
+                for iFrame in range(len(number_of_buffers)):
+                    (status, number_of_buffers[iFrame]) = KYFG_BufferAllocAndAnnounce(streamHandle, payload_size, 0)
+                (status,) = KYFG_BufferQueueAll(streamHandle, KY_ACQ_QUEUE_TYPE.KY_ACQ_QUEUE_UNQUEUED,
+                                                KY_ACQ_QUEUE_TYPE.KY_ACQ_QUEUE_INPUT)
+                (status,) = KYFG_CameraStart(cameraHandle, streamHandle, 0)
+                started_cameras.add((i, camera_index))
+
+        if not started_cameras:
+            print("[ERROR] No eligible cameras were prepared for acquisition")
+            return CaseReturnCode.COULD_NOT_RUN
+
+        # Start trigger generation
+        for i in range(len(grabbers)):
+            if grabbers[i] == 0:
+                continue
+            KYFG_SetGrabberValueEnum_ByValueName(grabbers[i], "TimerTriggerSource", "KY_CONTINUOUS")
+        time.sleep(duration)
+
+    finally:
+        # Disable trigger generation before stopping any acquisition.
+        for i in sorted(configured_timers):
+            cleanup_call(KYFG_SetGrabberValueEnum_ByValueName,
+                         grabbers[i], "TimerTriggerSource", "KY_DISABLED")
+
+        for i, camera_index in sorted(opened_cameras):
+            grabberHandle = grabbers[i]
+            cameraHandle = camerasArray[i][camera_index]
+            if (i, camera_index) in started_cameras:
+                cleanup_call(KYFG_CameraStop, cameraHandle)
+            if (i, camera_index) in grabber_triggers_enabled:
+                if cleanup_call(KYFG_SetGrabberValueInt, grabberHandle,
+                                "CameraSelector", camera_index):
+                    cleanup_call(KYFG_SetGrabberValueEnum_ByValueName,
+                                 grabberHandle, "CameraTriggerMode", "Off")
+            if (i, camera_index) in camera_triggers_enabled:
+                cleanup_call(KYFG_SetCameraValueEnum_ByValueName,
+                             cameraHandle, "TriggerMode", "Off")
+            streamHandle = streamHandleArray[i][camera_index]
+            if (i, camera_index) in registered_streams:
+                cleanup_call(KYFG_StreamBufferCallbackUnregister,
+                             streamHandle, streamCallbackFunction)
+            if streamHandle != 0:
+                cleanup_call(KYFG_StreamDelete, streamHandle)
+            cleanup_call(KYFG_CameraClose, cameraHandle)
+
+        for i, grabberHandle in enumerate(grabbers):
+            if grabberHandle == 0:
+                continue
+            if i in registered_aux:
+                cleanup_call(KYFG_AuxDataCallbackUnregister, grabberHandle, auxCallbackFunc)
+            if i in registered_events:
+                cleanup_call(KYDeviceEventCallBackUnregister, grabberHandle, device_event_callback_func)
+            cleanup_call(KYFG_Close, grabberHandle)
+
+    if cleanup_errors:
+        raise RuntimeError('Cleanup failed: ' + '; '.join(cleanup_errors))
+
+    # Validate once, after every acquisition and callback has been stopped.
+    for i in range(len(grabbers)):
+        if grabbers[i] == 0:
+            continue
+
+        print(f'\nGrabber: {grabbers_info[i].szDeviceDisplayName}: ')
+        print("auxCallbackCounter", grabber_callbacks[i].auxCallbackCounter)
+        print("eventCallbackCounter", grabber_callbacks[i].eventCallbackCounter)
+        for camera_index in range(len(camerasArray[i])):
+            if (i, camera_index) not in started_cameras:
+                continue
+            print(f'Camera: {camera_infos_array[i][camera_index].deviceModelName}')
+            print("streamCallbackCounter", stream_callbacks[i][camera_index].streamCallbackCounter)
+            if stream_callbacks[i][camera_index].streamCallbackCounter == 0:
+                print("[FAIL] KYFG_StreamBufferCallbackRegister: no stream callbacks received")
                 error_count += 1
             else:
-                print("[PASS] KYFG_AuxDataCallbackRegister")
+                print("[PASS] KYFG_StreamBufferCallbackRegister")
 
-            if grabber_callbacks[i].eventCallbackCounter == 0:
-                print("[FAIL] KYDeviceEventCallBackRegister: no device-event callbacks received")
-                error_count += 1
-            else:
-                print("[PASS] KYDeviceEventCallBackRegister")
+        if grabber_callbacks[i].auxCallbackCounter == 0:
+            print("[FAIL] KYFG_AuxDataCallbackRegister: no AUX callbacks received")
+            error_count += 1
+        else:
+            print("[PASS] KYFG_AuxDataCallbackRegister")
+
+        print("temperatureCallbackCounter", grabber_callbacks[i].temperatureCallbackCounter)
+        if not temperature_event_received:
+            print("[FAIL] KYDeviceEventCallBackRegister: no temperature event within the timeout")
+            error_count += 1
+        else:
+            print("[PASS] KYDeviceEventCallBackRegister: temperature event received after grabber open")
 
     assert error_count == 0, 'Test not passed'
     print(f'\nExiting from CaseRun({args}) with code SUCCESS...')
