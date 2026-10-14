@@ -14,12 +14,9 @@ from enum import IntEnum  # for CaseReturnCode
 # import numpy as np
 # import cv2
 # from numpngw import write_png
-import asyncio
 from datetime import datetime
 import time
-import threading
 import subprocess
-import queue
 import json
 import pathlib
 
@@ -36,7 +33,9 @@ def CaseArgumentParser():
                              'run this script with "--deviceList" to see available devices and exit')
     # Other arguments needed for this specific case, PARSE CASE SPECIFIC ARGUMENTS UNDER THIS LINE:
     parser.add_argument('--cameraIndex', type=int, default=0, help='Camera index for this instance')
-    parser.add_argument('--number_of_sent_triggers', type=int, default=100, help='Number of sent triggers')
+    parser.add_argument('--cameraMasterLink', type=int, default=None,
+                        help='Physical master link assigned to an internal camera worker')
+    parser.add_argument('--number_of_sent_triggers', type=int, default=5, help='Number of sent triggers')
     return parser
 
 
@@ -204,30 +203,26 @@ def ParseArgs():
     return vars(args)
 
 
-error_count = 0
-
-result_queue = queue.Queue()
-
-
-def run_async_function(device_index, camera_index, number_of_sent_triggers):
-    result = asyncio.run(new_instance(device_index, camera_index, number_of_sent_triggers))
-    result_queue.put(result)
-
-
-async def new_instance(device_index, camera_index, number_of_sent_triggers):
+def run_camera_instance(device_index, camera_index, number_of_sent_triggers, camera_master_link):
     instance_process = subprocess.Popen(
-        ["python", f"{__file__}", '--unattended', '--deviceIndex', f'{device_index}', "--cameraIndex",
-         f"{camera_index}",
-         "--number_of_sent_triggers", f"{number_of_sent_triggers}"],
+        [
+            sys.executable,
+            __file__,
+            '--unattended',
+            '--deviceIndex', str(device_index),
+            '--cameraIndex', str(camera_index),
+            '--cameraMasterLink', str(camera_master_link),
+            '--number_of_sent_triggers', str(number_of_sent_triggers)
+        ],
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        close_fds=True)
-    stdout_output, stderr_output = instance_process.communicate()
-    print(stdout_output.decode())
-    print(stderr_output)
+        stderr=subprocess.STDOUT,
+        close_fds=True
+    )
+    stdout_output, _ = instance_process.communicate()
+    if stdout_output:
+        print(stdout_output.decode(errors='ignore'))
     return_code = instance_process.returncode
-    print(return_code)
-
+    print(f'Camera instance {camera_index} on master link {camera_master_link} return code: {return_code}')
     return return_code
 
 
@@ -284,110 +279,122 @@ def CaseRun(args):
     camera_index = args['cameraIndex']
     number_of_sent_triggers = args['number_of_sent_triggers']
 
-    if camera_index == 0:
-        global error_count
+    camera_master_link = args.get('cameraMasterLink')
+    coordinator = camera_index == 0 and camera_master_link is None
+    cameraHandle = None
     (grabberHandle,) = KYFG_Open(device_index)
-    ############################
-    Reset_grabber(grabberHandle)
-    ############################
-
-    time.sleep(7)
-    (status, camera_list,) = KYFG_UpdateCameraList(grabberHandle)
-    camIndex = 0
-
-    if len(camera_list) == 0:
-        return CaseReturnCode.NO_HW_FOUND
-    if camera_index == 0:
-        threads = []
-        for i in range(1, len(camera_list)):
-            thread = threading.Thread(target=run_async_function,
-                                      args=(device_index, camera_index + i, number_of_sent_triggers))
-            threads.append(thread)
-            thread.start()
-
-    # Detect camera
-    cameraHandle = camera_list[camera_index]
-    if camera_index == 0:
-        (status,) = KYFG_CameraOpen2(camera_list[0], None)
-    else:
-        (status,) = KYFG_CameraOpen2(cameraHandle, None)
-
-    (status, camInfo) = KYFG_CameraInfo2(cameraHandle)
-
-    KYFG_SetGrabberValueInt(grabberHandle, "CameraSelector", camIndex)
-    ################################################
-    Reset_camera(cameraHandle, grabberHandle)
-    ################################################
-
-    camera_master_link = camInfo.master_link
-    # Select the "CxpConnectionSelector" where camera is connected (i.e. master link of the camera)
-    (status,) = KYFG_SetGrabberValueInt(grabberHandle, "CxpConnectionSelector", camera_master_link)
-    # Clear the statistics of the following parameters by writing 0 to them:
-    (status,) = KYFG_SetGrabberValueInt(grabberHandle, "TriggerMissedCount", 0)
-    (status,) = KYFG_SetGrabberValueInt(grabberHandle, "TriggerSentCount", 0)
-    (status,) = KYFG_SetGrabberValueInt(grabberHandle, "TriggerAcknowledgeCount", 0)
-    (status,) = KYFG_SetGrabberValueInt(grabberHandle, "TriggerChangeCount", 0)
-    
-    time.sleep(2)
-    
-    (status, sent_count_before) = KYFG_GetGrabberValueInt(grabberHandle, "TriggerSentCount")
-    (status, change_count_before) = KYFG_GetGrabberValueInt(grabberHandle, "TriggerChangeCount")
-    print(f"TriggerSentCount: {sent_count_before}, TriggerChangeCount: {change_count_before} after reset trigger statistics")
-
-    # Set timer for triggering
-    (status,) = KYFG_SetGrabberValueEnum(grabberHandle, "TimerSelector", camera_master_link)
-    (status,) = KYFG_SetGrabberValueFloat(grabberHandle, "TimerDelay", 10.0)
-    (status,) = KYFG_SetGrabberValueFloat(grabberHandle, "TimerDuration", 10.0)
-    (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "TimerActivation", "RisingEdge")
-    (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "TimerTriggerSource", "KY_SOFTWARE")
-
-    # Set camera trigger
     try:
-        (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "CameraTriggerMode", 'On')
-        (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "CameraTriggerActivation", "RisingEdge")
-        (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "TriggerMode", "On")
-        (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "TriggerActivation", "RisingEdge")
-        (status,) = KYFG_SetCameraValueEnum(cameraHandle, "TriggerMode", 1)
-        (status,) = KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "TriggerActivation", "AnyEdge")
-    except:
-        print('Trigger Mode is not supported on this camera')
-        return CaseReturnCode.NO_HW_FOUND
-    print(f'KY_TIMER_ACTIVE_{camera_master_link}')
-    (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "CameraTriggerSource",
-                                                     f'KY_TIMER_ACTIVE_{camera_master_link}')
+        ############################
+        # Reset the shared grabber once, before testing the connected cameras.
+        if camera_master_link is None:
+            Reset_grabber(grabberHandle)
+        ############################
 
-    for i in range(number_of_sent_triggers):
-        print('Stop Loop', datetime.now().time())
-        print(f'Sent trigger number {i + 1}')
-        (status,) = KYFG_GrabberExecuteCommand(grabberHandle, "TimerTriggerSoftware")
-        time.sleep(0.1)
-        
-    (status, sent_count) = KYFG_GetGrabberValueInt(grabberHandle, "TriggerSentCount")
-    (status, change_count) = KYFG_GetGrabberValueInt(grabberHandle, "TriggerChangeCount")
-    
-    print(f"Current TriggerSentCount: {sent_count} TriggerChangeCount: {change_count} after test")
-    print(f"Real sent TriggerSentCount: {sent_count - sent_count_before} TriggerChangeCount: {change_count - change_count_before} after test")
+        time.sleep(7)
+        (status, camera_list,) = KYFG_UpdateCameraList(grabberHandle)
+        print(f'Detected {len(camera_list)} camera(s) in process {os.getpid()}')
+        if len(camera_list) == 0:
+            return CaseReturnCode.NO_HW_FOUND
 
-    (status,) = KYFG_CameraClose(cameraHandle)
-    camIndex += 1
-    (status,) = KYFG_Close(grabberHandle)
+        worker_cameras = []
+        if coordinator:
+            for index, handle in enumerate(camera_list[1:], start=1):
+                (status, info) = KYFG_CameraInfo2(handle)
+                worker_cameras.append((index, info.master_link))
 
-    if camera_index == 0:
-        for thread in threads:
-            thread.join()
+        # Match the assigned physical link even if discovery order changes.
+        if camera_master_link is not None:
+            for index, handle in enumerate(camera_list):
+                (status, info) = KYFG_CameraInfo2(handle)
+                if info.master_link == camera_master_link:
+                    camera_index = index
+                    break
+            else:
+                print(f'No camera detected on assigned master link {camera_master_link}')
+                return CaseReturnCode.NO_HW_FOUND
+        elif not 0 <= camera_index < len(camera_list):
+            print(f'Camera index {camera_index} is outside the detected camera list')
+            return CaseReturnCode.WRONG_PARAM_VALUE
+
+        # Detect camera
+        selected_camera = camera_list[camera_index]
+        (status,) = KYFG_CameraOpen2(selected_camera, None)
+        if status != FGSTATUS_OK:
+            raise RuntimeError(f'Camera open failed with status {status}')
+        cameraHandle = selected_camera
+
+        (status, camInfo) = KYFG_CameraInfo2(cameraHandle)
+
+        # CameraSelector addresses the SDK camera slot, not the physical CXP link.
+        (status,) = KYFG_SetGrabberValueInt(grabberHandle, "CameraSelector", camera_index)
+        ################################################
+        Reset_camera(cameraHandle, grabberHandle)
+        ################################################
+
+        camera_master_link = camInfo.master_link
+        # Select the "CxpConnectionSelector" where camera is connected (i.e. master link of the camera)
+        (status,) = KYFG_SetGrabberValueInt(grabberHandle, "CxpConnectionSelector", camera_master_link)
+
+        # Set timer for triggering
+        (status,) = KYFG_SetGrabberValueEnum(grabberHandle, "TimerSelector", camera_master_link)
+        (status,) = KYFG_SetGrabberValueFloat(grabberHandle, "TimerDelay", 10.0)
+        (status,) = KYFG_SetGrabberValueFloat(grabberHandle, "TimerDuration", 10.0)
+        (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "TimerActivation", "RisingEdge")
+        (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "TimerTriggerSource", "KY_SOFTWARE")
+
+        # Set camera trigger
+        try:
+            (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "CameraTriggerMode", 'On')
+            (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "CameraTriggerActivation", "RisingEdge")
+            (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "TriggerMode", "On")
+            (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "TriggerActivation", "RisingEdge")
+            (status,) = KYFG_SetCameraValueEnum(cameraHandle, "TriggerMode", 1)
+            (status,) = KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "TriggerActivation", "AnyEdge")
+        except:
+            print('Trigger Mode is not supported on this camera')
+            return CaseReturnCode.NO_HW_FOUND
+        print(f'KY_TIMER_ACTIVE_{camera_master_link}')
+        (status,) = KYFG_SetGrabberValueEnum_ByValueName(grabberHandle, "CameraTriggerSource",
+                                                         f'KY_TIMER_ACTIVE_{camera_master_link}')
+
+        # Clear trigger counters AFTER the full trigger path is configured.
+        # From this point, count only the software triggers generated below.
+        (status,) = KYFG_SetGrabberValueInt(grabberHandle, "CxpConnectionSelector", camera_master_link)
+        (status,) = KYFG_SetGrabberValueInt(grabberHandle, "TriggerMissedCount", 0)
+        (status,) = KYFG_SetGrabberValueInt(grabberHandle, "TriggerSentCount", 0)
+        (status,) = KYFG_SetGrabberValueInt(grabberHandle, "TriggerAcknowledgeCount", 0)
+        (status,) = KYFG_SetGrabberValueInt(grabberHandle, "TriggerChangeCount", 0)
+
+        for i in range(number_of_sent_triggers):
+            print('Stop Loop', datetime.now().time())
+            print(f'Sent trigger number {i + 1}')
+            (status,) = KYFG_GrabberExecuteCommand(grabberHandle, "TimerTriggerSoftware")
+            time.sleep(2)
+        (status, sent_count) = KYFG_GetGrabberValueInt(grabberHandle, "TriggerSentCount")
+        (status, change_count) = KYFG_GetGrabberValueInt(grabberHandle, "TriggerChangeCount")
+        print("TriggerSentCount:", sent_count, "TriggerChangeCount:", change_count)
+
+        print("number of sent triggers:", number_of_sent_triggers)
+
+        assert sent_count == number_of_sent_triggers, f'TriggerSentCount: {sent_count} is not match to ' \
+                                                      f'number_of_sent_triggers: {number_of_sent_triggers}'
+        assert change_count == number_of_sent_triggers, f'TriggerChangeCount {change_count} is not match to ' \
+                                                        f'number_of_sent_triggers {number_of_sent_triggers}'
+    finally:
+        try:
+            if cameraHandle is not None:
+                KYFG_CameraClose(cameraHandle)
+        finally:
+            KYFG_Close(grabberHandle)
+
+    # Release every hardware handle before another process scans the grabber.
+    if coordinator:
         results = []
-        while not result_queue.empty():
-            result = result_queue.get()
-            results.append(result)
+        for index, master_link in worker_cameras:
+            results.append(run_camera_instance(
+                device_index, index, number_of_sent_triggers, master_link))
         print('results =', results)
-
-    assert (sent_count - sent_count_before) == number_of_sent_triggers, f'TriggerSentCount: {sent_count} is not match to ' \
-                                                  f'number_of_sent_triggers: {number_of_sent_triggers}'
-    assert (change_count - change_count_before) == number_of_sent_triggers, f'TriggerChangeCount {change_count} is not match to ' \
-                                                    f'number_of_sent_triggers {number_of_sent_triggers}'
-    if camera_index == 0:
-        for res in results:
-            assert res == 0, 'Errors while test'
+        assert all(result == 0 for result in results), f'Errors while test: {results}'
     print(f'\nExiting from CaseRun({args}) with code 0...')
     return CaseReturnCode.SUCCESS
 

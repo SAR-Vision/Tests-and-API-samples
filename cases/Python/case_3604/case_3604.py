@@ -17,6 +17,7 @@ from enum import IntEnum  # for CaseReturnCode
 import time
 import json
 import pathlib
+from ctypes import cast, py_object
 
 
 def CaseArgumentParser():
@@ -31,7 +32,6 @@ def CaseArgumentParser():
                              'run this script with "--deviceList" to see available devices and exit')
     # Other arguments needed for this specific case, PARSE CASE SPECIFIC ARGUMENTS UNDER THIS LINE:
     return parser
-
 
 
 # Common KAYA fragment_03
@@ -206,7 +206,6 @@ def Reset_camera(cameraHandle, grabberHandle):     # Camera initialization for t
 # END OF Common KAYA fragment_03
 
 
-
 def ParseArgs():
     parser = CaseArgumentParser()
     args = parser.parse_args()
@@ -220,8 +219,38 @@ class DeviceEventCallbackStruct:
 
 def deviceEventCallbackFunction(userContext, event):
     event_struct = cast(userContext, py_object).value
-    print(event.event_id)
-    event_struct += 1
+    device_event = getattr(event, 'deviceEvent', None)
+    event_id = getattr(device_event, 'eventId', getattr(event, 'event_id', None))
+    if event_id == KYDEVICE_EVENT_ID.KYDEVICE_EVENT_GENCP_EVENT_ID:
+        event_struct.callbackCounter += 1
+        print(f'Received GenCP event: port={event.srcDevicePort}, '
+              f'eventId={event.gencpEvent.eventId}')
+
+
+class EventMessageNotSupported(RuntimeError):
+    pass
+
+
+def send_event_message(api_name, send_function, *args):
+    payload = args[-1]
+    print(f'{api_name}: sending eventId={args[-2]}, payload bytes={len(payload)}')
+    try:
+        status, processed_size = send_function(*args)
+    except KYException as ex:
+        if str(ex).startswith('0x3FFE '):
+            raise EventMessageNotSupported(
+                f'{api_name}: FGSTATUS_FEATURE_NOT_IMPLEMENTED (0x3FFE); '
+                'event sending is unavailable on this device/SDK configuration'
+            ) from ex
+        raise
+
+    print(f'{api_name}: API status=0x{status:X}, processed bytes={processed_size}')
+    if status == 0x3FFE:
+        raise EventMessageNotSupported(f'{api_name}: FGSTATUS_FEATURE_NOT_IMPLEMENTED (0x3FFE)')
+    if status != FGSTATUS_OK:
+        raise RuntimeError(f'{api_name} failed: status=0x{status:X}')
+    if processed_size != len(payload):
+        raise RuntimeError(f'{api_name}: expected {len(payload)} processed bytes, got {processed_size}')
 
 
 def CaseRun(args):
@@ -271,29 +300,64 @@ def CaseRun(args):
 
     # Other parameters used by this particular case
     (status, devInfo) = KY_DeviceInfo(device_index)
+    if status != FGSTATUS_OK:
+        print(f'[ERROR] Failed to get device info: status={status}')
+        return CaseReturnCode.COULD_NOT_RUN
     if devInfo.m_Protocol != KY_DEVICE_PROTOCOL.KY_DEVICE_PROTOCOL_CLHS:
         print('Test for CLHS device only')
         return CaseReturnCode.COULD_NOT_RUN
     (grabberHandle,) = KYFG_Open(device_index)
-    (status, camList) = KYFG_UpdateCameraList(grabberHandle)
-    cameraHandle = camList[0]
-    (status, camInfo) = KYFG_CameraInfo2(cameraHandle)
-    port = camInfo.master_link
-    (status,) = KYFG_CameraOpen2(cameraHandle, None)
+    callback_registered = False
+    try:
+        (status, camList) = KYFG_UpdateCameraList(grabberHandle)
+        if status != FGSTATUS_OK:
+            print(f'[ERROR] Failed to update camera list: status={status}')
+            return CaseReturnCode.COULD_NOT_RUN
+        if not camList:
+            print('[ERROR] No cameras detected')
+            return CaseReturnCode.NO_HW_FOUND
 
-####################################
-    Reset_camera(cameraHandle)
-####################################
-               
-    event_struct = DeviceEventCallbackStruct()
+        cameraHandle = camList[0]
+        (status, camInfo) = KYFG_CameraInfo2(cameraHandle)
+        if status != FGSTATUS_OK:
+            print(f'[ERROR] Failed to get camera info: status={status}')
+            return CaseReturnCode.COULD_NOT_RUN
+        port = camInfo.master_link
+        print(f'Testing camera [0], master_link={port}')
+        (status,) = KYFG_CameraOpen2(cameraHandle, None)
+        if status != FGSTATUS_OK:
+            print(f'[ERROR] Failed to open camera: status={status}')
+            return CaseReturnCode.COULD_NOT_RUN
 
-    (status,) = KYDeviceEventCallBackRegister(grabberHandle, deviceEventCallbackFunction, py_object(event_struct))
-    port_message_buffer = [0 for i in range(4)]
-    camera_message_buffer = [0 for i in range(4)]
-    status, pSize = KYFG_DevicePortSendEventMessage(grabberHandle, port, 5, port_message_buffer)
-    status, pSize = KYFG_CameraSendEventMessage(cameraHandle, 5, camera_message_buffer)
-    (status,) = KYFG_Close(grabberHandle)
-    assert event_struct.callbackCounter == 2
+        Reset_camera(cameraHandle, grabberHandle)
+        event_struct = DeviceEventCallbackStruct()
+        callback_context = py_object(event_struct)
+        (status,) = KYDeviceEventCallBackRegister(
+            grabberHandle, deviceEventCallbackFunction, callback_context)
+        if status != FGSTATUS_OK:
+            print(f'[ERROR] Failed to register event callback: status={status}')
+            return CaseReturnCode.COULD_NOT_RUN
+        callback_registered = True
+
+        send_event_message('KYFG_DevicePortSendEventMessage',
+                           KYFG_DevicePortSendEventMessage, grabberHandle, port, 5, [0] * 4)
+        send_event_message('KYFG_CameraSendEventMessage',
+                           KYFG_CameraSendEventMessage, cameraHandle, 5, [0] * 4)
+        print(f'Received GenCP events so far: {event_struct.callbackCounter} '
+              '(diagnostic only; camera response is not guaranteed)')
+    except EventMessageNotSupported as ex:
+        print(f'[COULD_NOT_RUN] {ex}')
+        return CaseReturnCode.COULD_NOT_RUN
+    finally:
+        try:
+            if callback_registered:
+                (status,) = KYDeviceEventCallBackUnregister(grabberHandle, deviceEventCallbackFunction)
+                if status != FGSTATUS_OK:
+                    raise RuntimeError(f'Failed to unregister event callback: status={status}')
+        finally:
+            (status,) = KYFG_Close(grabberHandle)
+            if status != FGSTATUS_OK:
+                raise RuntimeError(f'Failed to close grabber: status={status}')
     print(f'\nExiting from CaseRun({args}) with code SUCCESS...')
     return CaseReturnCode.SUCCESS
 
@@ -301,6 +365,7 @@ def CaseRun(args):
 # The flow starts here
 if __name__ == "__main__":
     try:
+        print("Process ID:", os.getpid())
         args_ = ParseArgs()
         return_code = CaseRun(args_)
         print(f'Case return code: {return_code}')

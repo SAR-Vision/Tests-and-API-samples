@@ -2,6 +2,8 @@
 import sys
 import os
 import argparse
+from ctypes import py_object
+
 os.environ["WithAdapter"] = "1"
 sys.path.insert(0, os.environ['KAYA_VISION_POINT_PYTHON_PATH'])
 from KYFGLib import *

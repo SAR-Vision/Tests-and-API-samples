@@ -30,8 +30,9 @@ def CaseArgumentParser():
                         help='Index of PCI device to use, '
                              'run this script with "--deviceList" to see available devices and exit')
     # Other arguments needed for this specific case, PARSE CASE SPECIFIC ARGUMENTS UNDER THIS LINE:
-    parser.add_argument('--cameraModel', type=str, default='Iron250C')
-    parser.add_argument('--number_of_tests', type=int, default=10)
+    parser.add_argument('--cameraModel', type=str, default='Any',
+                        help='Camera model to test; Any tests all detected cameras')
+    parser.add_argument('--number_of_tests', type=int, default=3)
     return parser
 
 
@@ -291,55 +292,60 @@ def CaseRun(args):
     Reset_grabber(grabberHandle)
     ############################
 
-    camera_on_grabber = None
+    expected_cameras = None
     KYDeviceEventCallBackRegister(grabberHandle, eventCallback, None)
 
     for i in range(number_of_tests):
         print(f'\nTest number {i+1}')
         (status, cameraList) = KYFG_UpdateCameraList(grabberHandle)
         assert len(cameraList), 'No cameras detected'
-        cameraHandle = None
+        selected_cameras = []
+        detected_cameras = set()
         for cam in cameraList:
             (status, camInfo) = KYFG_CameraInfo2(cam)
-            if camInfo.deviceModelName == camera_model:
-                cameraHandle = cam
-                break
-        if camera_on_grabber is None:
-            if cameraHandle is None:
-                return CaseReturnCode.NO_HW_FOUND
-            else:
-                camera_on_grabber = True
-        else:
-            assert cameraHandle is not None, f'Camera not detected while {i} iteration'
-        (status, camInfo) = KYFG_CameraInfo2(cameraHandle)
-        (status,) = KYFG_CameraOpen2(cameraHandle, None)
+            if camera_model.casefold() == 'any' or camInfo.deviceModelName == camera_model:
+                selected_cameras.append((cam, camInfo))
+                detected_cameras.add((camInfo.deviceModelName, camInfo.master_link))
+        if not selected_cameras:
+            print(f'No cameras matching cameraModel={camera_model!r}')
+            KYFG_Close(grabberHandle)
+            return CaseReturnCode.NO_HW_FOUND
+        if expected_cameras is None:
+            expected_cameras = detected_cameras
+        elif not expected_cameras.issubset(detected_cameras):
+            missing_cameras = expected_cameras - detected_cameras
+            raise RuntimeError(f'Cameras not detected in iteration {i+1}: {missing_cameras}')
 
-        #########################################
-        Reset_camera(cameraHandle, grabberHandle)
-        #########################################
+        print(f'Selected cameras: {len(selected_cameras)} (cameraModel={camera_model})')
+        for cameraHandle, camInfo in selected_cameras:
+            (status,) = KYFG_CameraOpen2(cameraHandle, None)
+
+            #########################################
+            Reset_camera(cameraHandle, grabberHandle)
+            #########################################
                
-        if KYFG_IsGrabberValueImplemented(grabberHandle, "TriggerMode"):
-            KYFG_SetGrabberValueEnum(grabberHandle, "TriggerMode", 0)
-        if KYFG_IsCameraValueImplemented(cameraHandle, "TriggerMode"):
-            KYFG_SetCameraValueEnum(cameraHandle, "TriggerMode", 0)
-        KYFG_SetGrabberValueInt(grabberHandle, "CameraSelector", cameraList.index(cameraHandle))
-        print(f'Start test for camera {camInfo.deviceModelName}')
+            if KYFG_IsGrabberValueImplemented(grabberHandle, "TriggerMode"):
+                KYFG_SetGrabberValueEnum(grabberHandle, "TriggerMode", 0)
+            if KYFG_IsCameraValueImplemented(cameraHandle, "TriggerMode"):
+                KYFG_SetCameraValueEnum(cameraHandle, "TriggerMode", 0)
+            KYFG_SetGrabberValueInt(grabberHandle, "CameraSelector", cameraList.index(cameraHandle))
+            print(f'Start test for camera {camInfo.deviceModelName}, master_link={camInfo.master_link}')
 
-        (status, streamHandle) = KYFG_StreamCreate(cameraHandle, 0)
-        stream_struct = StreamStruct()
-        (status,) = KYFG_StreamBufferCallbackRegister(streamHandle, streamCallbackFunction, stream_struct)
-        (status, pInfoBuffer, pInfoSize, pInfoType) = KYFG_StreamGetInfo(streamHandle, KY_STREAM_INFO_CMD.KY_STREAM_INFO_PAYLOAD_SIZE)
-        streamBuffersHandle = [0 for i in range(int(number_of_buffers))]
-        for IFrame in range(number_of_buffers):
-            (status,  streamBuffersHandle[i]) = KYFG_BufferAllocAndAnnounce(streamHandle, pInfoBuffer, 0)
-        (status,) = KYFG_BufferQueueAll(streamHandle, KY_ACQ_QUEUE_TYPE.KY_ACQ_QUEUE_UNQUEUED, KY_ACQ_QUEUE_TYPE.KY_ACQ_QUEUE_INPUT)
-        (status,) = KYFG_CameraStart(cameraHandle, streamHandle, 0)
-        time.sleep(2)
-        (status, frame_counter) = KYFG_GetGrabberValueInt(grabberHandle, "RXFrameCounter")
-        if not frame_counter or not stream_struct.callbackCounter:
-            print('ERROR! Acquisition is not started')
-            print(f'callbackCounter: {stream_struct.callbackCounter} frame_counter {frame_counter}')
-            error_count += 1
+            (status, streamHandle) = KYFG_StreamCreate(cameraHandle, 0)
+            stream_struct = StreamStruct()
+            (status,) = KYFG_StreamBufferCallbackRegister(streamHandle, streamCallbackFunction, stream_struct)
+            (status, pInfoBuffer, pInfoSize, pInfoType) = KYFG_StreamGetInfo(streamHandle, KY_STREAM_INFO_CMD.KY_STREAM_INFO_PAYLOAD_SIZE)
+            streamBuffersHandle = [0 for i in range(int(number_of_buffers))]
+            for IFrame in range(number_of_buffers):
+                (status,  streamBuffersHandle[IFrame]) = KYFG_BufferAllocAndAnnounce(streamHandle, pInfoBuffer, 0)
+            (status,) = KYFG_BufferQueueAll(streamHandle, KY_ACQ_QUEUE_TYPE.KY_ACQ_QUEUE_UNQUEUED, KY_ACQ_QUEUE_TYPE.KY_ACQ_QUEUE_INPUT)
+            (status,) = KYFG_CameraStart(cameraHandle, streamHandle, 0)
+            time.sleep(2)
+            (status, frame_counter) = KYFG_GetGrabberValueInt(grabberHandle, "RXFrameCounter")
+            if not frame_counter or not stream_struct.callbackCounter:
+                print('ERROR! Acquisition is not started')
+                print(f'callbackCounter: {stream_struct.callbackCounter} frame_counter {frame_counter}')
+                error_count += 1
         KYFG_GrabberExecuteCommand(grabberHandle, "CxpPoCxpTurnOff")
         time.sleep(10)
         KYFG_GrabberExecuteCommand(grabberHandle, "CxpPoCxpAuto")

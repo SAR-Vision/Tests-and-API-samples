@@ -217,7 +217,7 @@ def ParseArgs():
 ############
 # Classes
 ############
-class AXUCallbackStruct:
+class AUXCallbackStruct:
     def __init__(self):
         self.callbackCount = 0
 
@@ -401,7 +401,7 @@ def CaseRun(args):
         error_count += 1
         return CaseReturnCode.NO_HW_FOUND
 
-    aux_callback_struct = AXUCallbackStruct()
+    aux_callback_struct = AUXCallbackStruct()
     (status,) = KYFG_AuxDataCallbackRegister(grabberHandle, AUXCallbackFunc, py_object(aux_callback_struct))
     encoderSetting(grabberHandle, encoderInverterValue, EncoderPositionTrigger)
     time.sleep(1)
