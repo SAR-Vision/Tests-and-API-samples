@@ -2,8 +2,6 @@
 import sys
 import os
 import argparse
-from ctypes import py_object
-
 os.environ["WithAdapter"] = "1"
 sys.path.insert(0, os.environ['KAYA_VISION_POINT_PYTHON_PATH'])
 from KYFGLib import *
@@ -19,6 +17,7 @@ from enum import IntEnum  # for CaseReturnCode
 import time
 import pathlib
 import json
+from ctypes import py_object
 
 
 def CaseArgumentParser():
