@@ -17,6 +17,7 @@ from enum import IntEnum  # for CaseReturnCode
 import time
 import json
 import pathlib
+from ctypes import c_ubyte
 
 
 def CaseArgumentParser():
@@ -276,7 +277,7 @@ def CaseRun(args):
 
     # Other parameters used by this particular case
     ##########################################################################
-    ### Check for stream compatibility on 3-rd generation grabbers with VPI core
+    # Check for stream compatibility on 3-rd generation grabbers with VPI core
     ##########################################################################
 
     (status, device_info) = KY_DeviceInfo(device_index)
@@ -360,25 +361,11 @@ def CaseRun(args):
             (status, camInfo) = KYFG_CameraInfo2(cameraHandle)
             (status,) = KYFG_CameraOpen2(cameraHandle, None)
 
-            #########################################
-            Reset_camera(cameraHandle, grabberHandle)
-            #########################################
-
             print("-----------------------------------------------------------")
             print(f"Selected camera: [{cameraIndex}] {camInfo.deviceModelName}, CAMHANDLE: {hex(cameraHandle)}")
             print("-----------------------------------------------------------\n")
 
             (status,) = KYFG_SetGrabberValueInt(grabberHandle, "CameraSelector", cameraIndex)
-
-            try:
-                if KYFG_IsGrabberValueImplemented(grabberHandle, 'TriggerMode'):
-                    KYFG_SetGrabberValueEnum(grabberHandle, "TriggerMode", 0)
-                if KYFG_IsCameraValueImplemented(cameraHandle, "TriggerMode"):
-                    KYFG_SetCameraValueEnum(cameraHandle, "TriggerMode", 0)
-                if KYFG_IsCameraValueImplemented(cameraHandle, "SimulationTriggerMode"):
-                    KYFG_SetCameraValueEnum(cameraHandle, "SimulationTriggerMode", 0)
-            except:
-                pass
 
             stream_struct = Stream_struct()
 

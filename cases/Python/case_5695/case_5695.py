@@ -34,7 +34,9 @@ def CaseArgumentParser():
                         help='Index of PCI device to use, '
                              'run this script with "--deviceList" to see available devices and exit')
     # Other arguments needed for this specific case, PARSE CASE SPECIFIC ARGUMENTS UNDER THIS LINE:
-    parser.add_argument('--number_of_sent_tests', type=int, default=10, help='Number of sent tests')
+    parser.add_argument('--number_of_sent_tests', type=int, default=3, help='Number of sent tests')
+    parser.add_argument('--PixelFormat', type=str, default='',
+                        help='Camera Pixel Format. If omitted, use the PixelFormat from Default User Set')
     return parser
 
 
@@ -228,52 +230,89 @@ def ParseArgs():
 
 
 def callbackFunc(buffHandle, userContext):
-    global g_isFailState
     if buffHandle == NULL_STREAM_BUFFER_HANDLE or buffHandle == INVALID_STREAM_BUFFER_HANDLE:
         return
-    (status, base, _, _) = KYFG_BufferGetInfo(buffHandle, KY_STREAM_BUFFER_INFO_CMD.KY_STREAM_BUFFER_INFO_BASE)
-    (status, size, _, _) = KYFG_BufferGetInfo(buffHandle, KY_STREAM_BUFFER_INFO_CMD.KY_STREAM_BUFFER_INFO_SIZE)
-    buf_type = ctypes.c_uint8 * size
-    buf = buf_type.from_address(base)
 
-    arr = np.frombuffer(buf, dtype=np.uint16)
-    arr = arr.reshape((userContext.height, userContext.width))
-    if not np.array_equal(arr, userContext.testPatternBuffer):
-
-        userContext.testResult = False
-        if not g_isFailState:
-
-            Image.fromarray(arr).save(f"failedImage.png")
-            with open(f"failedImage.raw", 'wb')as f:
-                f.write(arr.tobytes())
-        g_isFailState = True
-    else:
-        print("Success TO COMPARE IMAGE")
-        pass
-    (status, frameCount) = KYFG_GetGrabberValueInt(userContext.grabberHandle, "RXFrameCounter")
-    (status, dropFrameCounter) = KYFG_GetGrabberValueInt(userContext.grabberHandle, "DropFrameCounter")
-    print(f"frameCount = {frameCount} dropFrameCounter = {dropFrameCounter}", end='\r')
-    userContext.frameCounter += 1
     try:
-        (KYFG_BufferToQueue_status,) = KYFG_BufferToQueue(buffHandle, KY_ACQ_QUEUE_TYPE.KY_ACQ_QUEUE_INPUT)
-    except:
-        return
+        (status, base, _, _) = KYFG_BufferGetInfo(
+            buffHandle,
+            KY_STREAM_BUFFER_INFO_CMD.KY_STREAM_BUFFER_INFO_BASE
+        )
+        (status, size, _, _) = KYFG_BufferGetInfo(
+            buffHandle,
+            KY_STREAM_BUFFER_INFO_CMD.KY_STREAM_BUFFER_INFO_SIZE
+        )
+
+        expected_pixels = userContext.width * userContext.height
+        expected_bytes = expected_pixels * np.dtype(userContext.dtype).itemsize
+
+        if size < expected_bytes:
+            userContext.callbackError = (
+                f"Buffer size {size} is smaller than expected {expected_bytes} "
+                f"for PixelFormat {userContext.pixelFormat}"
+            )
+            return
+
+        buf_type = ctypes.c_uint8 * size
+        buf = buf_type.from_address(base)
+
+        arr = np.frombuffer(
+            buf,
+            dtype=userContext.dtype,
+            count=expected_pixels
+        ).reshape((userContext.height, userContext.width))
+
+        userContext.frameCounter += 1
+
+        if userContext.frameCounter == userContext.framesToReceive:
+            userContext.lastFrame = arr.copy()
+
+        (status, frameCount) = KYFG_GetGrabberValueInt(
+            userContext.grabberHandle, "RXFrameCounter"
+        )
+        (status, dropFrameCounter) = KYFG_GetGrabberValueInt(
+            userContext.grabberHandle, "DropFrameCounter"
+        )
+
+        print(
+            f"Received frame {userContext.frameCounter}/{userContext.framesToReceive}; "
+            f"RXFrameCounter = {frameCount}; DropFrameCounter = {dropFrameCounter}",
+            end='\\r'
+        )
+
+    except Exception as ex:
+        userContext.callbackError = str(ex)
+
+    finally:
+        try:
+            (status,) = KYFG_BufferToQueue(
+                buffHandle,
+                KY_ACQ_QUEUE_TYPE.KY_ACQ_QUEUE_INPUT
+            )
+        except:
+            pass
+
     return
 
 
 class CallbackStruct:
-    testPatternBuffer = []
-    testResult = True
-    width = 0
-    height = 0
-    grabberHandle = 0x0
-    frameCounter = 0
-
-    def __init__(self, buffer: np.array, width, height, grabberHandle):
-        self.testPatternBuffer = np.array(buffer)
+    def __init__(
+            self,
+            width,
+            height,
+            grabberHandle,
+            dtype,
+            pixelFormat,
+            framesToReceive=10):
         self.width = width
         self.height = height
         self.grabberHandle = grabberHandle
+        self.dtype = dtype
+        self.pixelFormat = pixelFormat
+        self.framesToReceive = framesToReceive
+        self.frameCounter = 0
+        self.lastFrame = None
+        self.callbackError = None
 
 
 class TestPatternDescriptor():
@@ -318,6 +357,174 @@ class TestPatternDescriptor():
         plt.xlabel("Width")
         plt.ylabel("Height")
         plt.show()
+
+
+def get_pixel_format_dtype(pixel_format):
+    pixel_format_upper = pixel_format.upper()
+
+    if "PACKED" in pixel_format_upper or pixel_format_upper.endswith("P"):
+        raise ValueError(
+            f"Packed PixelFormat '{pixel_format}' is not supported by case_5695"
+        )
+
+    if not (
+        pixel_format_upper.startswith("MONO")
+        or pixel_format_upper.startswith("BAYER")
+    ):
+        raise ValueError(
+            f"PixelFormat '{pixel_format}' is not a supported Mono/Bayer format"
+        )
+
+    if pixel_format_upper.endswith("8"):
+        return np.uint8
+
+    return np.uint16
+
+
+def get_camera_pixel_format(cameraHandle):
+    (status, pixel_format) = KYFG_GetCameraValueStringCopy(
+        cameraHandle,
+        "PixelFormat"
+    )
+    return pixel_format
+
+
+def load_default_user_set(cameraHandle):
+    (status,) = KYFG_SetCameraValueEnum_ByValueName(
+        cameraHandle,
+        "UserSetSelector",
+        "Default"
+    )
+    (status,) = KYFG_CameraExecuteCommand(
+        cameraHandle,
+        "UserSetLoad"
+    )
+
+    (status, user_set_value) = KYFG_GetCameraValueEnum(
+        cameraHandle,
+        "UserSetSelector"
+    )
+
+    assert user_set_value == 0, (
+        f"UserSetSelector value is {user_set_value}, expected Default (0)"
+    )
+
+    print("UserSetSelector = Default")
+    print("UserSetLoad executed")
+
+
+def verify_default_user_set(cameraHandle):
+    (status, user_set_value) = KYFG_GetCameraValueEnum(
+        cameraHandle,
+        "UserSetSelector"
+    )
+
+    print(
+        f"UserSetSelector after Power ON = "
+        f"{'Default' if user_set_value == 0 else user_set_value}"
+    )
+
+    assert user_set_value == 0, (
+        f"UserSetSelector after Power ON is {user_set_value}, "
+        f"expected Default (0)"
+    )
+
+
+def get_golden_parameters(cameraHandle, test_pattern_name):
+    (status, test_pattern_value) = KYFG_GetCameraValueEnum(
+        cameraHandle,
+        "TestPattern"
+    )
+    (status, width) = KYFG_GetCameraValueInt(cameraHandle, "Width")
+    (status, height) = KYFG_GetCameraValueInt(cameraHandle, "Height")
+    (status, min_value) = KYFG_GetCameraValueInt(
+        cameraHandle,
+        "TestPatternValueMin"
+    )
+    (status, max_value) = KYFG_GetCameraValueInt(
+        cameraHandle,
+        "TestPatternValueMax"
+    )
+    (status, step) = KYFG_GetCameraValueInt(
+        cameraHandle,
+        "TestPatternStep"
+    )
+
+    return {
+        "UserSetSelector": "Default",
+        "TestPattern": test_pattern_name,
+        "TestPatternValue": int(test_pattern_value),
+        "TestPatternValueMin": int(min_value),
+        "TestPatternValueMax": int(max_value),
+        "TestPatternStep": int(step),
+        "PixelFormat": get_camera_pixel_format(cameraHandle),
+        "Width": int(width),
+        "Height": int(height)
+    }
+
+
+def print_parameters(title, parameters):
+    print()
+    print(title)
+    for name, value in parameters.items():
+        print(f" - {name}: {value}")
+    print()
+
+
+def verify_cycle_parameters(cameraHandle, golden_parameters):
+    (status, current_test_pattern) = KYFG_GetCameraValueEnum(
+        cameraHandle,
+        "TestPattern"
+    )
+    (status, current_min) = KYFG_GetCameraValueInt(
+        cameraHandle,
+        "TestPatternValueMin"
+    )
+    (status, current_max) = KYFG_GetCameraValueInt(
+        cameraHandle,
+        "TestPatternValueMax"
+    )
+    (status, current_step) = KYFG_GetCameraValueInt(
+        cameraHandle,
+        "TestPatternStep"
+    )
+    (status, current_width) = KYFG_GetCameraValueInt(
+        cameraHandle,
+        "Width"
+    )
+    (status, current_height) = KYFG_GetCameraValueInt(
+        cameraHandle,
+        "Height"
+    )
+    current_pixel_format = get_camera_pixel_format(cameraHandle)
+
+    checks = {
+        "TestPatternValue": int(current_test_pattern),
+        "TestPatternValueMin": int(current_min),
+        "TestPatternValueMax": int(current_max),
+        "TestPatternStep": int(current_step),
+        "PixelFormat": current_pixel_format,
+        "Width": int(current_width),
+        "Height": int(current_height)
+    }
+
+    for name, current_value in checks.items():
+        golden_value = golden_parameters[name]
+
+        assert current_value == golden_value, (
+            f"{name} changed after Power ON: "
+            f"current={current_value}, golden={golden_value}"
+        )
+
+
+def save_frame(frame, png_path, raw_path):
+    Image.fromarray(frame).save(str(png_path))
+
+    with open(raw_path, "wb") as raw_file:
+        raw_file.write(frame.tobytes())
+
+    print(f"[INFO] Saved image: {png_path}")
+    print(f"[INFO] Saved RAW:   {raw_path}")
 
 
 def CaseRun(args):
@@ -368,92 +575,441 @@ def CaseRun(args):
     # Other parameters used by this particular case
     (status, device_info) = KY_DeviceInfo(device_index)
 
-    ##########################################################################
-
     number_of_sent_tests = args['number_of_sent_tests']
-    # if camera_index == 0:
+    requested_pixel_format = args['PixelFormat']
+
+    case_folder = pathlib.Path(__file__).resolve().parent
+    print(f"[INFO] Images will be saved in: {case_folder}")
+
+    NUMBER_OF_FRAMES = 10
+    ACQUISITION_TIMEOUT_SEC = 30
+    TEST_PATTERN_NAME = "GrayHorizontalRamp"
+
+    # ============================================================
+    # INITIAL SETUP AND GOLDEN IMAGE
+    # ============================================================
 
     (grabberHandle,) = KYFG_Open(device_index)
+
     ############################
     Reset_grabber(grabberHandle)
     ############################
 
     (status, camera_list) = KYFG_UpdateCameraList(grabberHandle)
+
+    if len(camera_list) == 0:
+        KYFG_Close(grabberHandle)
+        return CaseReturnCode.NO_HW_FOUND
+
     camIndex = 0
-    (status,) = KYFG_CameraOpen2(camera_list[camIndex], None)
     cameraHandle = camera_list[camIndex]
+
+    (status,) = KYFG_CameraOpen2(cameraHandle, None)
     (status, camInfo) = KYFG_CameraInfo2(cameraHandle)
 
-    KYFG_SetGrabberValueInt(grabberHandle, "CameraSelector", camIndex)
-    #########################################
-    Reset_camera(cameraHandle, grabberHandle)
-    #########################################
+    (status,) = KYFG_SetGrabberValueInt(
+        grabberHandle,
+        "CameraSelector",
+        camIndex
+    )
 
     print("-----------------------------------------------------------")
-    print(f"Selected camera: [{camIndex}] {camInfo.deviceModelName}, CAMHANDLE: {hex(cameraHandle)}")
-    print("-----------------------------------------------------------\n")
+    print(
+        f"Selected camera: [{camIndex}] "
+        f"{camInfo.deviceModelName}, CAMHANDLE: {hex(cameraHandle)}"
+    )
+    print("-----------------------------------------------------------")
+
+    # Set User Set = Default and execute UserSetLoad.
+    load_default_user_set(cameraHandle)
+
+    # Set requested PixelFormat. If omitted, keep Default User Set PixelFormat.
+    if requested_pixel_format:
+        (status,) = KYFG_SetCameraValueEnum_ByValueName(
+            cameraHandle,
+            "PixelFormat",
+            requested_pixel_format
+        )
+
+    pixel_format = get_camera_pixel_format(cameraHandle)
+
+    if requested_pixel_format:
+        assert pixel_format == requested_pixel_format, (
+            f"PixelFormat was requested as '{requested_pixel_format}', "
+            f"but camera reports '{pixel_format}'"
+        )
+
+    pixel_dtype = get_pixel_format_dtype(pixel_format)
+
+    # Set test pattern, then save all parameters used for Golden Image.
+    (status,) = KYFG_SetCameraValueEnum_ByValueName(
+        cameraHandle,
+        "TestPattern",
+        TEST_PATTERN_NAME
+    )
+
+    golden_parameters = get_golden_parameters(
+        cameraHandle,
+        TEST_PATTERN_NAME
+    )
+
+    print_parameters(
+        "Golden Image parameters:",
+        golden_parameters
+    )
+
+    width = golden_parameters["Width"]
+    height = golden_parameters["Height"]
+    minValue = golden_parameters["TestPatternValueMin"]
+    maxValue = golden_parameters["TestPatternValueMax"]
+    step = golden_parameters["TestPatternStep"]
+
+    testPattern = TestPatternDescriptor(
+        width,
+        height,
+        minValue,
+        maxValue,
+        step
+    )
+
+    golden_image = testPattern.generate_horizontal_pattern(
+        dtype=pixel_dtype
+    )
+
+    safe_pixel_format = "".join(
+        c if c.isalnum() or c in ("-", "_") else "_"
+        for c in pixel_format
+    )
+
+    golden_png = case_folder / f"golden_{safe_pixel_format}.png"
+    golden_raw = case_folder / f"golden_{safe_pixel_format}.raw"
+    golden_json = case_folder / f"golden_{safe_pixel_format}_parameters.json"
+
+    save_frame(
+        golden_image,
+        golden_png,
+        golden_raw
+    )
+
+    with open(golden_json, "w", encoding="utf-8") as json_file:
+        json.dump(golden_parameters, json_file, indent=4)
+
+    print(f"[INFO] Saved parameters: {golden_json}")
 
     PoXCPLink = findPoCXPLik(grabberHandle)
 
-    (status, width) = KYFG_GetCameraValueInt(cameraHandle, "Width")
-    (status, height) = KYFG_GetCameraValueInt(cameraHandle, "Height")
-    (status, minValue) = KYFG_GetCameraValueInt(cameraHandle, "TestPatternValueMin")
-    (status, maxValue) = KYFG_GetCameraValueInt(cameraHandle, "TestPatternValueMax")
-    (status, step) = KYFG_GetCameraValueInt(cameraHandle, "TestPatternStep")
+    assert PoXCPLink is not None, "Could not find active PoCXP link"
 
-    testPattern = TestPatternDescriptor(width, height, minValue, maxValue, step)
-    testPattern.generate_horizontal_pattern()
-    #testPattern.show_pattern()
-    KYFG_CameraClose(cameraHandle)
+    (status,) = KYFG_CameraClose(cameraHandle)
 
-    KYFG_SetGrabberValueBool(grabberHandle, "PoCXPAutoActive", False)
-    KYFG_SetGrabberValueEnum(grabberHandle, f"PoCXP{PoXCPLink}", 0)
-    KYFG_Close(grabberHandle)
+    # Power OFF before the first test cycle.
+    (status,) = KYFG_SetGrabberValueBool(
+        grabberHandle,
+        "PoCXPAutoActive",
+        False
+    )
+    (status,) = KYFG_SetGrabberValueEnum(
+        grabberHandle,
+        f"PoCXP{PoXCPLink}",
+        0
+    )
+    (status,) = KYFG_Close(grabberHandle)
 
-    for i in range(number_of_sent_tests):
-        print(f"START TEST NUMBER {i+1}")
-        time.sleep(2)
-        KYFG_Open(device_index)
-        KYFG_SetGrabberValueEnum(grabberHandle, f"PoCXP{PoXCPLink}", 1)
-        time.sleep(5)
+    # ============================================================
+    # POWER CYCLES
+    # ============================================================
 
-        (status, camera_list) = KYFG_UpdateCameraList(grabberHandle)
-        (status,) = KYFG_CameraOpen2(camera_list[camIndex], None)
-        KYFG_SetCameraValueEnum_ByValueName(cameraHandle, "TestPattern", "GrayHorizontalRamp")
-        (status, streamHandle) = KYFG_StreamCreate(cameraHandle, 0)
-        streamCallbackStruct = CallbackStruct(testPattern.m_buffer, width, height, grabberHandle)
+    for test_index in range(number_of_sent_tests):
 
-        (status,) = KYFG_StreamBufferCallbackRegister(streamHandle, callbackFunc, streamCallbackStruct)
+        cycle_number = test_index + 1
 
-        (_, payload_size, _, _) = KYFG_StreamGetInfo(streamHandle, KY_STREAM_INFO_CMD.KY_STREAM_INFO_PAYLOAD_SIZE)
-        (_, buf_alignment, _, _) = KYFG_StreamGetInfo(streamHandle, KY_STREAM_INFO_CMD.KY_STREAM_INFO_BUF_ALIGNMENT)
-        streamBufferHandle = [0 for i in range(16)]
+        print()
+        print("===========================================================")
+        print(f"START TEST NUMBER {cycle_number}")
+        print("===========================================================")
 
-        for iFrame in range(len(streamBufferHandle)):
-            (status, streamBufferHandle[iFrame]) = KYFG_BufferAllocAndAnnounce(streamHandle, payload_size, 0)
-        KYFG_BufferQueueAll(streamHandle, KY_ACQ_QUEUE_TYPE.KY_ACQ_QUEUE_UNQUEUED, KY_ACQ_QUEUE_TYPE.KY_ACQ_QUEUE_INPUT)
+        # Wait 1000 msec while camera is powered OFF.
+        time.sleep(1)
 
-        KYFG_CameraStart(cameraHandle, streamHandle, 0)
-        time.sleep(3)
-        KYFG_CameraStop(cameraHandle)
+        grabberHandle = None
+        cameraHandle = None
+        streamHandle = None
 
-        (status, frameCount) = KYFG_GetGrabberValueInt(grabberHandle, "RXFrameCounter")
-        (status, dropFrameCounter) = KYFG_GetGrabberValueInt(grabberHandle, "DropFrameCounter")
+        try:
+            # Power ON.
+            (grabberHandle,) = KYFG_Open(device_index)
 
-        KYFG_StreamDelete(streamHandle)
-        KYFG_CameraClose(cameraHandle)
-        print(f"\nTest statistic: frame counter {frameCount} Drop frames: {dropFrameCounter} callbacks {streamCallbackStruct.frameCounter}")
-        assert (frameCount != 0 and dropFrameCounter == 0), f"TEST NUMBER {i+1} IS FAILED"
-        assert streamCallbackStruct.testResult, f"TEST NUMBER {i + 1} IS FAILED"
-        print(f"TEST NUMBER {i+1} IS PASSED")
+            (status,) = KYFG_SetGrabberValueBool(
+                grabberHandle,
+                "PoCXPAutoActive",
+                False
+            )
+            (status,) = KYFG_SetGrabberValueEnum(
+                grabberHandle,
+                f"PoCXP{PoXCPLink}",
+                1
+            )
 
-        KYFG_SetGrabberValueEnum(grabberHandle, f"PoCXP{PoXCPLink}", 0)
+            # Keep the camera boot delay used by the original test.
+            time.sleep(5)
+
+            (status, camera_list) = KYFG_UpdateCameraList(
+                grabberHandle
+            )
+
+            assert len(camera_list) > camIndex, (
+                f"Camera was not discovered after Power ON "
+                f"in test {cycle_number}"
+            )
+
+            cameraHandle = camera_list[camIndex]
+
+            (status,) = KYFG_CameraOpen2(
+                cameraHandle,
+                None
+            )
+
+            (status, current_cam_info) = KYFG_CameraInfo2(
+                cameraHandle
+            )
+
+            assert current_cam_info.deviceModelName == camInfo.deviceModelName, (
+                f"Different camera detected after Power ON: "
+                f"{current_cam_info.deviceModelName}, "
+                f"expected {camInfo.deviceModelName}"
+            )
+
+            (status,) = KYFG_SetGrabberValueInt(
+                grabberHandle,
+                "CameraSelector",
+                camIndex
+            )
+
+            # Verify that UserSetSelector is Default after Power ON.
+            verify_default_user_set(cameraHandle)
+
+            # Restore the same PixelFormat and TestPattern used for Golden Image.
+            (status,) = KYFG_SetCameraValueEnum_ByValueName(
+                cameraHandle,
+                "PixelFormat",
+                golden_parameters["PixelFormat"]
+            )
+            (status,) = KYFG_SetCameraValueEnum_ByValueName(
+                cameraHandle,
+                "TestPattern",
+                golden_parameters["TestPattern"]
+            )
+
+            # Verify all relevant parameters against Golden Image parameters.
+            verify_cycle_parameters(
+                cameraHandle,
+                golden_parameters
+            )
+
+            # Reset acquisition statistics when supported.
+            try:
+                (status,) = KYFG_SetGrabberValueInt(
+                    grabberHandle,
+                    "RXFrameCounter",
+                    0
+                )
+            except:
+                pass
+
+            try:
+                (status,) = KYFG_SetGrabberValueInt(
+                    grabberHandle,
+                    "DropFrameCounter",
+                    0
+                )
+            except:
+                pass
+
+            # Receive exactly 10 images.
+            (status, streamHandle) = KYFG_StreamCreate(
+                cameraHandle,
+                0
+            )
+
+            streamCallbackStruct = CallbackStruct(
+                width=width,
+                height=height,
+                grabberHandle=grabberHandle,
+                dtype=pixel_dtype,
+                pixelFormat=pixel_format,
+                framesToReceive=NUMBER_OF_FRAMES
+            )
+
+            (status,) = KYFG_StreamBufferCallbackRegister(
+                streamHandle,
+                callbackFunc,
+                streamCallbackStruct
+            )
+
+            (status, payload_size, _, _) = KYFG_StreamGetInfo(
+                streamHandle,
+                KY_STREAM_INFO_CMD.KY_STREAM_INFO_PAYLOAD_SIZE
+            )
+
+            streamBufferHandle = [0 for _ in range(16)]
+
+            for iFrame in range(len(streamBufferHandle)):
+                (status, streamBufferHandle[iFrame]) = KYFG_BufferAllocAndAnnounce(
+                    streamHandle,
+                    payload_size,
+                    0
+                )
+
+            (status,) = KYFG_BufferQueueAll(
+                streamHandle,
+                KY_ACQ_QUEUE_TYPE.KY_ACQ_QUEUE_UNQUEUED,
+                KY_ACQ_QUEUE_TYPE.KY_ACQ_QUEUE_INPUT
+            )
+
+            (status,) = KYFG_CameraStart(
+                cameraHandle,
+                streamHandle,
+                NUMBER_OF_FRAMES
+            )
+
+            start_time = time.time()
+
+            while streamCallbackStruct.frameCounter < NUMBER_OF_FRAMES:
+
+                if streamCallbackStruct.callbackError is not None:
+                    break
+
+                if time.time() - start_time > ACQUISITION_TIMEOUT_SEC:
+                    break
+
+                time.sleep(0.05)
+
+            try:
+                (status,) = KYFG_CameraStop(cameraHandle)
+            except:
+                pass
+
+            (status, frameCount) = KYFG_GetGrabberValueInt(
+                grabberHandle,
+                "RXFrameCounter"
+            )
+            (status, dropFrameCounter) = KYFG_GetGrabberValueInt(
+                grabberHandle,
+                "DropFrameCounter"
+            )
+
+            print(
+                f"\\nTest statistic: frame counter {frameCount} "
+                f"Drop frames {dropFrameCounter} "
+                f"callbacks {streamCallbackStruct.frameCounter}"
+            )
+
+            assert streamCallbackStruct.callbackError is None, (
+                f"Stream callback error: {streamCallbackStruct.callbackError}"
+            )
+
+            assert streamCallbackStruct.frameCounter == NUMBER_OF_FRAMES, (
+                f"Received {streamCallbackStruct.frameCounter} images, "
+                f"expected {NUMBER_OF_FRAMES}"
+            )
+
+            assert streamCallbackStruct.lastFrame is not None, (
+                "The 10th image was not received"
+            )
+
+            last_frame = streamCallbackStruct.lastFrame
+
+            # Save only the last (10th) image.
+            cycle_png = (
+                case_folder /
+                f"cycle_{cycle_number:03d}_frame_010_{safe_pixel_format}.png"
+            )
+            cycle_raw = (
+                case_folder /
+                f"cycle_{cycle_number:03d}_frame_010_{safe_pixel_format}.raw"
+            )
+
+            save_frame(
+                last_frame,
+                cycle_png,
+                cycle_raw
+            )
+
+            # Compare the last image with Golden Image.
+            images_equal = np.array_equal(
+                last_frame,
+                golden_image
+            )
+
+            if not images_equal:
+                mismatch_mask = last_frame != golden_image
+                mismatch_count = int(np.count_nonzero(mismatch_mask))
+
+                print(
+                    f"[FAIL] Golden Image mismatch: "
+                    f"{mismatch_count} different pixels"
+                )
+
+                mismatch_indexes = np.argwhere(mismatch_mask)
+
+                for row, col in mismatch_indexes[:10]:
+                    print(
+                        f"  [{row}, {col}] "
+                        f"actual={last_frame[row, col]}, "
+                        f"golden={golden_image[row, col]}"
+                    )
+
+            assert images_equal, (
+                f"TEST NUMBER {cycle_number} IS FAILED: "
+                f"10th image is different from Golden Image"
+            )
+
+            assert dropFrameCounter == 0, (
+                f"TEST NUMBER {cycle_number} IS FAILED: "
+                f"DropFrameCounter = {dropFrameCounter}"
+            )
+
+            print(f"TEST NUMBER {cycle_number} IS PASSED")
+
+        finally:
+            if streamHandle:
+                try:
+                    KYFG_StreamDelete(streamHandle)
+                except:
+                    pass
+
+            if cameraHandle:
+                try:
+                    KYFG_CameraClose(cameraHandle)
+                except:
+                    pass
+
+            if grabberHandle:
+                try:
+                    KYFG_SetGrabberValueEnum(
+                        grabberHandle,
+                        f"PoCXP{PoXCPLink}",
+                        0
+                    )
+                except:
+                    pass
+
+                try:
+                    KYFG_Close(grabberHandle)
+                except:
+                    pass
+
+    # Restore automatic PoCXP handling.
+    (grabberHandle,) = KYFG_Open(device_index)
+
+    try:
+        (status,) = KYFG_SetGrabberValueBool(grabberHandle, "PoCXPAutoActive", True)
+        (status,) = KYFG_GrabberExecuteCommand(grabberHandle, "CxpPoCxpAuto")
+        print("PoCXPAutoActive is True")
+    finally:
         KYFG_Close(grabberHandle)
 
-    KYFG_Open(device_index)
-    KYFG_SetGrabberValueBool(grabberHandle, "PoCXPAutoActive", True)
-    KYFG_Close(grabberHandle)
-    print(f'\nExiting from CaseRun({args}) with code 0...')
+    print(f'\\nExiting from CaseRun({args}) with code 0...')
     return CaseReturnCode.SUCCESS
 
 

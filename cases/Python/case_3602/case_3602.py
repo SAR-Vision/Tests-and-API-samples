@@ -264,19 +264,45 @@ def CaseRun(args):
     Reset_grabber(grabberHandle)
     ############################
 
-    (status, camList) = KYFG_UpdateCameraList(grabberHandle)
-    error_count = 0
+    try:
+        (status, camList) = KYFG_UpdateCameraList(grabberHandle)
+        if status != FGSTATUS_OK:
+            print(f'[ERROR] Failed to update camera list: status={status}')
+            return CaseReturnCode.COULD_NOT_RUN
+        if not camList:
+            print('[ERROR] No cameras detected; master_link status was not checked')
+            return CaseReturnCode.NO_HW_FOUND
 
-    for cameraHandle in camList:
-        (status, camInfo) = KYFG_CameraInfo2(cameraHandle)
-        port = camInfo.master_link
-        if KYFG_IsGrabberValueImplemented(grabberHandle, ''):
-            (status, portStatus) = KYFG_GetPortStatus(grabberHandle, port)
-            print(f'Port status on link {port} is {portStatus}')
-            if portStatus != PORT_STATUS.PORT_CONNECTED:
+        print(f'Detected cameras: {len(camList)}')
+        error_count = 0
+        checked_count = 0
+
+        for camera_index, cameraHandle in enumerate(camList):
+            (status, camInfo) = KYFG_CameraInfo2(cameraHandle)
+            if status != FGSTATUS_OK:
+                print(f'[ERROR] Camera [{camera_index}]: failed to get camera info: status={status}')
                 error_count += 1
-    KYFG_Close(grabberHandle)
-    assert error_count == 0, "test not passed"
+                continue
+
+            port = camInfo.master_link
+            print(f'Camera [{camera_index}]: reading port status on master_link {port}')
+            (status, portStatus) = KYFG_GetPortStatus(grabberHandle, port)
+            print(f'Camera [{camera_index}]: port status on link {port} is {portStatus}, API status={status}')
+            if status != FGSTATUS_OK:
+                print(f'[ERROR] Failed to read port status on link {port}')
+                error_count += 1
+                continue
+
+            checked_count += 1
+            if portStatus != PORT_STATUS.PORT_CONNECTED:
+                print(f'[ERROR] Camera [{camera_index}]: expected PORT_CONNECTED on link {port}')
+                error_count += 1
+
+        print(f'Checked camera master links: {checked_count}/{len(camList)}, errors: {error_count}')
+        if error_count:
+            return CaseReturnCode.WRONG_PARAM_VALUE
+    finally:
+        KYFG_Close(grabberHandle)
 
     print(f'\nExiting from CaseRun({args}) with code SUCCESS...')
     return CaseReturnCode.SUCCESS

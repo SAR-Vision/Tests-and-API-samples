@@ -203,18 +203,24 @@ camHandleArray = {}
 
 
 def get_log_offsets(path):
+
     offsets = {}
 
     for file_name in os.listdir(path):
-        full_path = os.path.join(path, file_name)
+
+        full_path = os.path.join(
+            path,
+            file_name
+        )
 
         if (
             os.path.isfile(full_path)
-            and file_name.startswith("KAYA_")
-            and file_name.endswith(".log")
+            and file_name.lower().endswith(".log")
         ):
             try:
-                offsets[full_path] = os.path.getsize(full_path)
+                offsets[full_path] = os.path.getsize(
+                    full_path
+                )
             except OSError:
                 continue
 
@@ -247,10 +253,10 @@ def check_log(path, string_to_check, since_offsets=None):
                 print(f"[WARN] Could not read log file {full_path}: {ex}")
                 continue
 
-            if data:
-                for line in data.splitlines():
-                    if "json" in line.lower() or "invalid" in line.lower():
-                        print(f"[LOG] {file_name}: {line}")
+            # if data:
+            #     for line in data.splitlines():
+            #         if "json" in line.lower() or "invalid" in line.lower():
+            #             print(f"[LOG] {file_name}: {line}")
 
             if string_to_check.lower() in data.lower():
                 print(f"[INFO] Found '{string_to_check}' in: {file_name}")
@@ -328,6 +334,7 @@ def get_kaya_conf_folder():
         raise EnvironmentError("KAYA_VISION_POINT_CONF is not defined")
 
     conf_folder = pathlib.Path(conf_path)
+    print("Conf path: ", conf_path)
 
     if not conf_folder.is_dir():
         raise FileNotFoundError(
@@ -337,18 +344,75 @@ def get_kaya_conf_folder():
     return conf_folder
 
 
+# def get_vp_log_folder():
+#     system_platform = platform.system().lower()
+#
+#     if system_platform == "windows":
+#         log_folder = pathlib.Path(r"C:\ProgramData\KAYA Instruments\Logs")
+#     elif system_platform == "linux":
+#         log_folder = pathlib.Path("/var/log/KAYA_Instruments")
+#     else:
+#         raise RuntimeError(f"Unsupported platform: {platform.system()}")
+#
+#     if not log_folder.is_dir():
+#         raise FileNotFoundError(f"Vision Point log folder not found: {log_folder}")
+#
+#     return log_folder
+
 def get_vp_log_folder():
+
+    # WithAdapter=1 -> Vision Point II logs
+    if os.environ.get("WithAdapter", ""):
+        log_path = os.environ.get("KAYA_VISION_POINT_2_LOGS")
+
+        if log_path:
+            log_folder = pathlib.Path(log_path)
+
+            if log_folder.is_dir():
+                print(
+                    "[INFO] Using KAYA_VISION_POINT_2_LOGS:",
+                    log_folder
+                )
+                return log_folder
+
+    # Fallback to VP1 log variable
+    log_path = os.environ.get("KAYA_VISION_POINT_LOGS")
+
+    if log_path:
+        log_folder = pathlib.Path(log_path)
+
+        if log_folder.is_dir():
+            print(
+                "[INFO] Using KAYA_VISION_POINT_LOGS:",
+                log_folder
+            )
+            return log_folder
+
+    # Last fallback
     system_platform = platform.system().lower()
 
     if system_platform == "windows":
-        log_folder = pathlib.Path(r"C:\ProgramData\KAYA Instruments\Logs")
+        log_folder = pathlib.Path(
+            r"C:\ProgramData\KAYA Instruments\Logs"
+        )
     elif system_platform == "linux":
-        log_folder = pathlib.Path("/var/log/KAYA_Instruments")
+        log_folder = pathlib.Path(
+            "/var/log/KAYA_Instruments"
+        )
     else:
-        raise RuntimeError(f"Unsupported platform: {platform.system()}")
+        raise RuntimeError(
+            f"Unsupported platform: {platform.system()}"
+        )
 
     if not log_folder.is_dir():
-        raise FileNotFoundError(f"Vision Point log folder not found: {log_folder}")
+        raise FileNotFoundError(
+            f"Vision Point log folder not found: {log_folder}"
+        )
+
+    print(
+        "[WARN] Using fallback log directory:",
+        log_folder
+    )
 
     return log_folder
 
@@ -465,7 +529,6 @@ def CaseRun(args):
 
         return CaseReturnCode.WRONG_PARAM_VALUE
 
-
     # ------------------------------------------------------------
     # Locate DevicePID folder
     # ------------------------------------------------------------
@@ -555,7 +618,6 @@ def CaseRun(args):
     LOG_POLL_INTERVAL_SEC = 0.5
     LOG_POLL_TIMEOUT_SEC = 30
 
-
     def wait_for_log(
         string_to_check,
         since_offsets,
@@ -579,7 +641,6 @@ def CaseRun(args):
             time.sleep(
                 LOG_POLL_INTERVAL_SEC
             )
-
 
     try:
 
@@ -617,17 +678,20 @@ def CaseRun(args):
         )
 
         invalid_json_error_found = wait_for_log(
-            "HW_INVALID_JSON_FILE",
+            # "HW_INVALID_JSON_FILE",
+            "KY_RESULT_INTERNAL_HWLIB_INVALID_JSON",
             offsets_before_incorrect
         )
 
         assert invalid_json_error_found, (
-            "HW_INVALID_JSON_FILE was not found in "
+            # "HW_INVALID_JSON_FILE was not found in "
+            "KY_RESULT_INTERNAL_HWLIB_INVALID_JSON was not found in "
             "Vision Point logs with incorrect JSON"
         )
 
         print(
             "[PASS] HW_INVALID_JSON_FILE was found "
+            "KY_RESULT_INTERNAL_HWLIB_INVALID_JSON "
             "with incorrect JSON"
         )
 
@@ -647,12 +711,6 @@ def CaseRun(args):
             f"    -> {target_json}"
         )
 
-        shutil.copy2(
-            correct_json_src,
-            target_json
-        )
-
-
         offsets_before_correct = get_log_offsets(
             str(log_folder)
         )
@@ -669,12 +727,14 @@ def CaseRun(args):
         )
 
         invalid_json_error_found = wait_for_log(
-            "HW_INVALID_JSON_FILE",
+            # "HW_INVALID_JSON_FILE",
+            "KY_RESULT_INTERNAL_HWLIB_INVALID_JSON",
             offsets_before_correct
         )
 
         assert not invalid_json_error_found, (
-            "HW_INVALID_JSON_FILE was found in "
+            # "HW_INVALID_JSON_FILE was found in "
+            "KY_RESULT_INTERNAL_HWLIB_INVALID_JSON was not found in "
             "Vision Point logs with correct JSON"
         )
 

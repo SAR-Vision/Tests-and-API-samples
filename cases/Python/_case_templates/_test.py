@@ -88,6 +88,8 @@ def copy_log(script, parameters, pid):
 
     if len(parameters_name_folder) > 255:
         parameters_name_folder = parameters_name_folder[0:255]
+    # Windows normalizes trailing spaces and dots in directory names.
+    parameters_name_folder = parameters_name_folder.rstrip(' .') or 'default'
     if not log_folder.exists():
         log_folder.mkdir()
     parameters_logs_path = log_folder.joinpath(parameters_name_folder)
