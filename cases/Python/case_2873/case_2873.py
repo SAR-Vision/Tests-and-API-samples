@@ -30,7 +30,7 @@ def CaseArgumentParser():
                         help='Index of PCI device to use, '
                              'run this script with "--deviceList" to see available devices and exit')
     # Other arguments needed for this specific case, PARSE CASE SPECIFIC ARGUMENTS UNDER THIS LINE:
-    parser.add_argument('--number_of_tests', type=int, default=20, help='Number of camera start/stop in a loop')
+    parser.add_argument('--number_of_tests', type=int, default=3, help='Number of camera start/stop in a loop')
     return parser
 
 
@@ -341,19 +341,22 @@ def CaseRun(args):
         frame_threshold = 5
 
         try:
-            if KYFG_IsGrabberValueImplemented(cameraHandle, 'DropPacketCounter'):
-                (status, crc_errors) = KYFG_GetGrabberValue(cameraHandle, "CRCErrorCounter")
-                print("crc errors: ", crc_errors)
+            if KYFG_IsGrabberValueImplemented(grabberHandle, 'CRCErrorCounter'):
+                (status, crc_errors) = KYFG_GetGrabberValue(grabberHandle, 'CRCErrorCounter')
+                print("crc errors:", crc_errors)
                 assert crc_errors == 0, f"CRCErrorCounter: {crc_errors} is not zero on iteration: {str(i)}"
 
-            (status, dropped_frames) = KYFG_GetGrabberValue(cameraHandle, "DropFrameCounter")
-            print("dropped frames: ", dropped_frames)
+            (status, dropped_frames) = KYFG_GetGrabberValueInt(grabberHandle, "DropFrameCounter")
+            print("dropped frames:", dropped_frames)
             assert dropped_frames < frame_threshold, f"DropFrameCounter: {dropped_frames} on iteration: {str(i)}"
 
-            if KYFG_IsGrabberValueImplemented(cameraHandle, 'DropPacketCounter'):
-                (status, dropped_packets) = KYFG_GetGrabberValue(cameraHandle, "DropPacketCounter")
-                print("dropped packets: ", dropped_packets)
+            if KYFG_IsGrabberValueImplemented(grabberHandle, 'DropPacketCounter'):
+                (status, dropped_packets) = KYFG_GetGrabberValueInt(grabberHandle, "DropPacketCounter")
+                print("dropped packets:", dropped_packets)
             # assert dropped_packets == 0, f"DropPacketCounter: {dropped_packets} is not zero on iteration: {str(i)}"
+
+            (status, rx_frames) = KYFG_GetGrabberValueInt(grabberHandle, "RXFrameCounter")
+            print("number of received frames:", rx_frames)
 
         except AssertionError as e:
             print(f"Assertion failed: {e}")

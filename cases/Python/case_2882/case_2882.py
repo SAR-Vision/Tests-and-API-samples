@@ -398,18 +398,26 @@ def CaseRun(args):
                 if fg_stat_rxp < fg_stat_rxf:
                     print("RXFrameCounter < RXPacketCounter")
                     error_count += 1
-                (status, crc_errors) = KYFG_GetGrabberValue(cameraHandle, "CRCErrorCounter")
-                if KYFG_IsGrabberValueImplemented(cameraHandle, 'DropPacketCounter'):
-                    (status, dropped_packets) = KYFG_GetGrabberValue(cameraHandle, "DropPacketCounter")
-                    print("dropped packets: ", dropped_packets)
-                (status, dropped_frames) = KYFG_GetGrabberValue(cameraHandle, "DropFrameCounter")
 
-                print(f'CRCErrorCounter: {crc_errors}', f'DropFrameCounter: {dropped_frames}')
+                if KYFG_IsGrabberValueImplemented(grabberHandle, 'CRCErrorCounter'):
+                    (status, crc_errors) = KYFG_GetGrabberValue(grabberHandle, 'CRCErrorCounter')
+                    print("crc errors:", crc_errors)
+                    if crc_errors != 0:
+                        print('Not all CRCErrorCounter = 0')
+                        error_count += 1
+                    assert crc_errors == 0, f"CRCErrorCounter: {crc_errors} is not zero on iteration: {str(i)}"
+
+                if KYFG_IsGrabberValueImplemented(grabberHandle, 'DropPacketCounter'):
+                    (status, dropped_packets) = KYFG_GetGrabberValue(grabberHandle, "DropPacketCounter")
+                    print("dropped packets: ", dropped_packets)
+
+                (status, dropped_frames) = KYFG_GetGrabberValue(grabberHandle, "DropFrameCounter")
+                print(f'DropFrameCounter: {dropped_frames}')
                 print(f'RXFrameCounter: {fg_stat_rxf}', f'RXPacketCounter: {fg_stat_rxp}')
                 print("Received frames: " + str(fg_stat_rxf))
                 # Currently we have some DropFrames that we allow
-                if 0 != dropped_frames or crc_errors != 0:
-                    print('Not all "CRCErrorCounter", "DropFrameCounter" = 0')
+                if dropped_frames != 0:
+                    print('Not all "DropFrameCounter" = 0')
                     error_count += 1
                 if fg_stat_rxf > fg_stat_rxp:
                     print('fg_stat_rxf>fg_stat_rxp')
